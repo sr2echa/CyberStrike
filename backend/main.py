@@ -19,7 +19,7 @@ from llama_index.embeddings.langchain import LangchainEmbedding
 import fitz
 import pymupdf4llm
 
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -33,27 +33,32 @@ app.add_middleware(
     allow_credentials=True
 )
 
-
+# Initialize LLM
+gemini_llm = None
 try:
     google_api_key = os.environ.get("GOOGLE_API_KEY")
     if google_api_key:
-        Settings.llm = Gemini(api_key=google_api_key)
+        gemini_llm = Gemini(api_key=google_api_key)
+        Settings.llm = gemini_llm
         logger.info("Using Gemini LLM")
     else:
         logger.warning("Couldn't find Google API key.")
 except Exception as e:
     logger.error(f"Error initializing LLM: {e}")
 
+if not gemini_llm:
+    raise ValueError("Failed to initialize Gemini LLM. Please check your Google API key.")
+
 Settings.embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2"))
 
-
+# In-memory storage for document embeddings and metadata
 document_store = {}
 UPLOADS_DIR = "uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 class UploadRequest(BaseModel):
-    file: str  
-    filename: str  
+    file: str  # base64 encoded file
+    filename: str  # Original filename
 
 class UploadResponse(BaseModel):
     status: str
@@ -84,7 +89,7 @@ class VulnerabilitiesResponse(BaseModel):
 
 class IdRequest(BaseModel):
     id: str
-    
+
 def get_document_info(file_id: str) -> Dict[str, Any]:
     if file_id in document_store:
         return document_store[file_id]
@@ -100,7 +105,6 @@ def get_document_info(file_id: str) -> Dict[str, Any]:
             nodes = splitter.get_nodes_from_documents([document])
             doc_info['index'] = VectorStoreIndex(nodes)
         
-
         document_store[file_id] = doc_info
         return doc_info
     
@@ -199,14 +203,10 @@ async def chat(chat_request: ChatRequest):
         logger.error(f"Error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
 
-
-
 def clean_llm_response(response: str) -> str:
     """Remove Markdown code block syntax and any additional text from the LLM response."""
-    # Remove ```json from the start and ``` from the end
     cleaned = re.sub(r'^```json\s*', '', response.strip())
     cleaned = re.sub(r'\s*```$', '', cleaned)
-    # Remove any text before the first { and after the last }
     cleaned = re.sub(r'^[^{]*', '', cleaned)
     cleaned = re.sub(r'[^}]*$', '', cleaned)
     return cleaned
@@ -268,7 +268,7 @@ async def get_key_findings(id_request: IdRequest):
         IMPORTANT: Ensure that your response contains only the JSON object and no additional text.
         """
         
-        response = Settings.llm.complete(prompt + "\n\nDocument content:\n" + full_text)
+        response = gemini_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
         
         if not response.text.strip():
             raise ValueError("Empty response from LLM")
@@ -297,8 +297,6 @@ async def get_key_findings(id_request: IdRequest):
     except Exception as e:
         logger.error(f"Error extracting key findings: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error extracting key findings: {str(e)}")
-
-
 
 @app.post("/vulnerabilities", response_model=VulnerabilitiesResponse)
 async def get_vulnerabilities(id_request: IdRequest):
@@ -329,7 +327,7 @@ async def get_vulnerabilities(id_request: IdRequest):
         Ensure that your response contains only the JSON array and no additional text.
         """
         
-        response = Settings.llm.complete(prompt + "\n\nDocument content:\n" + full_text)
+        response = gemini_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
         
         if not response.text.strip():
             raise ValueError("Empty response from LLM")
@@ -409,6 +407,17 @@ async def root():
     </html>
     """
     return HTMLResponse(content=html_content)
+
+@app.get("/health")
+async def health_check():
+    try:
+        response = gemini_llm.complete("Say 'Gemini is working!'")
+        if "Gemini is working" in response.text:
+            return {"status": "healthy", "llm": "Gemini"}
+        else:
+            return {"status": "unhealthy", "llm": "Gemini", "reason": "Unexpected response"}
+    except Exception as e:
+        return {"status": "unhealthy", "llm": "Gemini", "reason": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
