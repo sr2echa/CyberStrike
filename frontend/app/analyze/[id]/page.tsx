@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   FileText,
   AlertTriangle,
@@ -13,10 +14,13 @@ import {
   Lock,
   Calendar,
   Clock,
+  Loader,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import ReactMarkdown from "react-markdown";
 
 // Mock data
 const fileAnalytics = {
@@ -31,94 +35,117 @@ const fileAnalytics = {
 const summary =
   "The security audit reveals several critical vulnerabilities that require immediate attention. Key areas of concern include insufficient penetration testing, inadequate cybersecurity resources, and a lack of comprehensive employee training. The organization also faces risks from third-party service providers and outdated firewall rules. Implementing the suggested mitigations will significantly improve the overall security posture.";
 
-const keyFindings = {
-  "Threat Landscape": {
-    "Emerging Threats": {
-      description: "New and evolving cyber threats pose significant risks",
-      examples: ["AI-powered attacks", "Quantum computing threats"],
-      impact: "Potential for unprecedented data breaches and system compromises",
-    },
-    "Attack Vectors": {
-      common_methods: ["Sophisticated phishing campaigns", "Supply chain attacks"],
-      trends: "Increasing use of AI in social engineering and automated attacks",
-    },
-  },
-  Vulnerabilities: {
-    "Critical Issues": {
-      top_vulnerabilities: ["Unpatched systems", "Weak access controls"],
-      mitigation_strategies: "Implement robust patch management and zero-trust architecture",
-    },
-  },
-  "Incident Response": {
-    "Recent Incidents": {
-      description: "Analysis shows a 20% increase in attempted breaches",
-      response_effectiveness: "Current response time averages 4 hours, needs improvement",
-    },
-  },
-  "Emerging Technologies": {
-    Impact: {
-      description: "Cloud migration introduces new security challenges",
-      associated_risks: ["Data sovereignty issues", "Misconfigured cloud services"],
-    },
-  },
-  "Compliance and Regulatory Issues": {
-    Challenges: {
-      description: "Keeping up with rapidly evolving global privacy laws",
-      regulatory_updates: "GDPR fines increased, new US state privacy laws enacted",
-    },
-  },
-};
+export default function Analyze() {
+  const backendUrl = "https://a8fa-2406-7400-c8-d322-a344-c630-8ad-e88.ngrok-free.app";
 
-const vulnerabilities = [
-  {
-    vulnerability: "Unpatched software with known exploits",
-    criticality_score: 9,
-    reasoning: "Easily exploitable and can lead to full system compromise",
-    mitigation: "Implement regular patching schedule and vulnerability scanning",
-  },
-  {
-    vulnerability: "Weak password policies",
-    criticality_score: 8,
-    reasoning: "Increases risk of unauthorized access and account takeovers",
-    mitigation: "Enforce strong password requirements and multi-factor authentication",
-  },
-  {
-    vulnerability: "Insufficient network segmentation",
-    criticality_score: 7,
-    reasoning: "Allows lateral movement once initial access is gained",
-    mitigation: "Implement proper network segmentation and access controls",
-  },
-  {
-    vulnerability: "Lack of employee security awareness training",
-    criticality_score: 8,
-    reasoning: "Employees are often the weakest link in security",
-    mitigation: "Conduct regular security awareness training and phishing simulations",
-  },
-  {
-    vulnerability: "Insecure third-party integrations",
-    criticality_score: 7,
-    reasoning: "Can provide backdoor access to systems and data",
-    mitigation: "Regularly audit and secure third-party integrations and APIs",
-  },
-];
+  //get the url
+  const url = usePathname();
+  const id = url.split("/").pop();
 
-export default function analyze() {
   const [chatMessages, setChatMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("summary");
   const chatEndRef = useRef(null);
+  const [vulnerabilities, setVulnerabilities] = useState([]);
+  const [keyFindings, setKeyFindings] = useState(null);
+  const [isLoadingVulnerabilities, setIsLoadingVulnerabilities] = useState(false);
+  const [isLoadingKeyFindings, setIsLoadingKeyFindings] = useState(false);
 
-  const handleSendMessage = () => {
+  useEffect(() => {
+    const fetchVulnerabilities = async () => {
+      setIsLoadingVulnerabilities(true);
+      try {
+        const response = await fetch(`${backendUrl}/vulnerabilities`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Vulnerabilities data:", data);
+        setVulnerabilities(data.vulnerabilities);
+      } catch (error) {
+        console.error("Error fetching vulnerabilities:", error);
+      } finally {
+        setIsLoadingVulnerabilities(false);
+      }
+    };
+
+    const fetchKeyFindings = async () => {
+      setIsLoadingKeyFindings(true);
+      try {
+        const response = await fetch(`${backendUrl}/keyfindings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Key findings data:", data);
+        setKeyFindings(data.findings);
+      } catch (error) {
+        console.error("Error fetching key findings:", error);
+      } finally {
+        setIsLoadingKeyFindings(false);
+      }
+    };
+
+    if (id) {
+      fetchVulnerabilities();
+      fetchKeyFindings();
+    }
+  }, [id, backendUrl]);
+
+  const handleSendMessage = async () => {
     if (inputMessage.trim()) {
-      setChatMessages([...chatMessages, { text: inputMessage, sender: "user" }]);
+      const newUserMessage = { role: "user", content: inputMessage };
+      setChatMessages([...chatMessages, newUserMessage]);
       setInputMessage("");
       setIsLoading(true);
-      // Simulate AI response
-      setTimeout(() => {
-        setChatMessages((prev) => [...prev, { text: inputMessage, sender: "ai" }]);
+
+      try {
+        const response = await fetch(`${backendUrl}/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: id,
+            query: inputMessage,
+            history: chatMessages,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const newBotMessage = { role: "bot", content: data.response };
+        setChatMessages((prevMessages) => [...prevMessages, newBotMessage]);
+      } catch (error) {
+        console.error("Error sending chat message:", error);
+        // Optionally, you can add an error message to the chat
+        setChatMessages((prevMessages) => [
+          ...prevMessages,
+          { role: "bot", content: "Sorry, there was an error processing your request." },
+        ]);
+      } finally {
         setIsLoading(false);
-      }, 1500);
+      }
     }
   };
 
@@ -142,16 +169,25 @@ export default function analyze() {
         </h2>
         <div className="flex-grow overflow-y-auto mb-4 p-4 bg-gray-100 rounded-lg">
           {chatMessages.map((msg, index) => (
-            <div
-              key={index}
-              className={`mb-2 ${msg.sender === "user" ? "text-right" : "text-left"}`}
-            >
+            <div key={index} className={`mb-2 ${msg.role === "user" ? "text-right" : "text-left"}`}>
               <span
                 className={`inline-block p-2 rounded-lg ${
-                  msg.sender === "user" ? "bg-black text-white" : "bg-gray-200"
+                  msg.role === "user" ? "bg-black text-white" : "bg-gray-200"
                 }`}
               >
-                {msg.text}
+                <ReactMarkdown
+                  components={{
+                    code({ node, inline, className, children, ...props }) {
+                      return (
+                        <code className="bg-gray-300 px-1 rounded" {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
               </span>
             </div>
           ))}
@@ -179,7 +215,7 @@ export default function analyze() {
             onKeyPress={handleKeyPress}
             className="flex-grow mr-2"
           />
-          <Button onClick={handleSendMessage}>
+          <Button onClick={handleSendMessage} disabled={isLoading}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
@@ -254,30 +290,38 @@ export default function analyze() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {Object.entries(keyFindings).map(([category, data], index) => (
-                <div key={index} className="mb-6">
-                  <h3 className="text-xl font-semibold mb-2">{category}</h3>
-                  {Object.entries(data).map(([subCategory, subData], subIndex) => (
-                    <div key={subIndex} className="mb-4 ml-4">
-                      <h4 className="text-lg font-medium mb-2">{subCategory}</h4>
-                      {Object.entries(subData).map(([key, value], i) => (
-                        <div key={i} className="mb-2">
-                          <strong>{key.charAt(0).toUpperCase() + key.slice(1)}:</strong>
-                          {Array.isArray(value) ? (
-                            <ul className="list-disc list-inside ml-2">
-                              {value.map((item, j) => (
-                                <li key={j}>{item}</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <span className="ml-2">{String(value)}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
+              {isLoadingKeyFindings ? (
+                <div className="flex justify-center items-center h-40">
+                  <Loader className="h-8 w-8 animate-spin" />
                 </div>
-              ))}
+              ) : keyFindings ? (
+                Object.entries(keyFindings).map(([category, data], index) => (
+                  <div key={index} className="mb-6">
+                    <h3 className="text-xl font-semibold mb-2">{category}</h3>
+                    {Object.entries(data).map(([subCategory, subData], subIndex) => (
+                      <div key={subIndex} className="mb-4 ml-4">
+                        <h4 className="text-lg font-medium mb-2">{subCategory}</h4>
+                        {Object.entries(subData).map(([key, value], i) => (
+                          <div key={i} className="mb-2">
+                            <strong>{key.charAt(0).toUpperCase() + key.slice(1)}:</strong>
+                            {Array.isArray(value) ? (
+                              <ul className="list-disc list-inside ml-2">
+                                {value.map((item, j) => (
+                                  <li key={j}>{item}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <span className="ml-2">{String(value)}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <p>No key findings available.</p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -291,33 +335,88 @@ export default function analyze() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {vulnerabilities.map((vuln, index) => (
-                <div key={index} className="mb-6 p-4 border border-gray-200 rounded-lg">
-                  <h3 className="text-xl font-semibold mb-2 flex items-center">
-                    <span
-                      className={`inline-block w-4 h-4 rounded-full mr-2 ${getCriticalityColor(
-                        vuln.criticality_score
-                      )}`}
-                    ></span>
-                    {vuln.vulnerability}
-                  </h3>
-                  <p className="mb-2">
-                    <strong>Criticality Score:</strong> {vuln.criticality_score}
-                  </p>
-                  <p className="mb-2">
-                    <strong>Reasoning:</strong> {vuln.reasoning}
-                  </p>
-                  <p>
-                    <strong>Mitigation:</strong> {vuln.mitigation}
-                  </p>
+              {isLoadingVulnerabilities ? (
+                <div className="flex justify-center items-center h-40">
+                  <Loader className="h-8 w-8 animate-spin" />
                 </div>
-              ))}
+              ) : vulnerabilities.length > 0 ? (
+                vulnerabilities.map((vuln, index) => (
+                  <div key={index} className="mb-6 p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-stretch mb-5">
+                      <div className={`w-2 mr-4 ${getCriticalityColor(vuln.criticality)}`}></div>
+                      <h3 className="text-xl font-semibold flex-grow font">
+                        <ReactMarkdown
+                          components={{
+                            code({ node, inline, className, children, ...props }) {
+                              return (
+                                <code className="bg-gray-200 px-1 rounded" {...props}>
+                                  {children}
+                                </code>
+                              );
+                            },
+                          }}
+                        >
+                          {vuln.description}
+                        </ReactMarkdown>
+                      </h3>
+                    </div>
+                    <div className="mb-2 flex items-center">
+                      <strong className="mr-2">Criticality Score:</strong> {vuln.criticality}
+                      <Progress
+                        value={vuln.criticality * 10}
+                        className="w-24 ml-2"
+                        indicatorClassName={getCriticalityColor(vuln.criticality)}
+                      />
+                    </div>
+                    <p className="mb-2">
+                      <strong>Reasoning:</strong>
+                      <ReactMarkdown
+                        components={{
+                          code({ node, inline, className, children, ...props }) {
+                            return (
+                              <code className="bg-gray-200 px-1 rounded" {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                      >
+                        {vuln.reasoning}
+                      </ReactMarkdown>
+                    </p>
+                    <p>
+                      <strong>Mitigation:</strong>
+                      <ReactMarkdown
+                        components={{
+                          code({ node, inline, className, children, ...props }) {
+                            return (
+                              <code className="bg-gray-200 px-1 rounded" {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                      >
+                        {vuln.mitigation}
+                      </ReactMarkdown>
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p>No vulnerabilities found.</p>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
     </div>
   );
+}
+
+function getCriticalityColor(score: number) {
+  if (score >= 8) return "bg-red-500";
+  if (score >= 5) return "bg-yellow-500";
+  return "bg-green-500";
 }
 
 function FileInfoItem({
@@ -359,10 +458,4 @@ function TabButton({
       {children}
     </button>
   );
-}
-
-function getCriticalityColor(score: number) {
-  if (score >= 8) return "bg-red-500";
-  if (score >= 5) return "bg-yellow-500";
-  return "bg-green-500";
 }
