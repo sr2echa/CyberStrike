@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+llama-index
+langchain
+sentence-transformers
+pymupdf
+pymupdf4llm
+google-generativeai
+nest-asyncio
