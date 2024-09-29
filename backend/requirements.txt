@@ -2,8 +2,10 @@ fastapi
 uvicorn
 pydantic
 python-multipart
-llama-index
-langchain
+llama-index.core
+llama-index.llms.gemini
+llama_index.embeddings.langchain
+langchain-community
 sentence-transformers
 pymupdf
 pymupdf4llm
