@@ -32,9 +32,6 @@ const fileAnalytics = {
   createdAt: "2023-09-01",
 };
 
-const summary =
-  "The security audit reveals several critical vulnerabilities that require immediate attention. Key areas of concern include insufficient penetration testing, inadequate cybersecurity resources, and a lack of comprehensive employee training. The organization also faces risks from third-party service providers and outdated firewall rules. Implementing the suggested mitigations will significantly improve the overall security posture.";
-
 export default function Analyze() {
   const backendUrl = "https://a44a-2406-7400-c8-676b-428c-454c-386e-3fb9.ngrok-free.app";
 
@@ -51,6 +48,8 @@ export default function Analyze() {
   const [keyFindings, setKeyFindings] = useState(null);
   const [isLoadingVulnerabilities, setIsLoadingVulnerabilities] = useState(false);
   const [isLoadingKeyFindings, setIsLoadingKeyFindings] = useState(false);
+  const [summary, setSummary] = useState("");
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
 
   useEffect(() => {
     const fetchVulnerabilities = async () => {
@@ -103,9 +102,35 @@ export default function Analyze() {
       }
     };
 
+    const fetchSummary = async () => {
+      setIsLoadingSummary(true);
+      try {
+        const response = await fetch(`${backendUrl}/summarize`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Summary data:", data);
+        setSummary(data.summary);
+      } catch (error) {
+        console.error("Error fetching summary:", error);
+      } finally {
+        setIsLoadingSummary(false);
+      }
+    };
+
     if (id) {
       fetchVulnerabilities();
       fetchKeyFindings();
+      fetchSummary();
     }
   }, [id, backendUrl]);
 
@@ -277,7 +302,19 @@ export default function Analyze() {
                 Executive Summary
               </CardTitle>
             </CardHeader>
-            <CardContent>{summary}</CardContent>
+            <CardContent>
+              {isLoadingSummary ? (
+                <div className="flex justify-center items-center h-40">
+                  <Loader className="h-8 w-8 animate-spin" />
+                </div>
+              ) : summary ? (
+                <div className="prose dark:prose-invert">
+                  <ReactMarkdown>{summary}</ReactMarkdown>
+                </div>
+              ) : (
+                <p>No summary available.</p>
+              )}
+            </CardContent>
           </Card>
         )}
 
