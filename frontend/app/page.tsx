@@ -19,36 +19,55 @@ export default function Page(){
 
 export function LandingSection(){
   return(
-    <div className="flex flex-col gap-4 px-32">
-      <div className="flex gap-4">
-        <div className="flex flex-1 py-4 md:flex-col justify-center gap-4 items-center">
-          <div className="">
-            <h1 className="text-8xl font-semibold text-center">CyberStrike</h1>
-            <h1 className="text-2xl font-semibold text-center">Developing and Safeguarding Organisations</h1>
-                <SparklesCore
-                background="transparent"
-                minSize={1}
-                maxSize={3}
-                particleDensity={300}
-                className="w-full h-full absolute inset-0"
-                particleColor=""
-              />
-          </div>
-          <Link href={"/upload2"}>
+    // <div className="flex h-screen md:h-auto w-screen justify-center flex-col">
+    //   {/* <h1 className="text-5xl sm:text-8xl font-semibold text-center">CyberStrike</h1> */}
+    //   {/* <h1 className="text-2xl font-semibold text-center">Developing and Safeguarding Organisations</h1> */}
+        
+    //     {/* <SparklesCore
+    //       background="transparent"
+    //       minSize={1}
+    //       maxSize={3}
+    //       particleDensity={300}
+    //       className="absolute inset-0"
+    //       particleColor=""
+    //     /> */}
+        // {/* <Link href={"/upload2"}>
+        // <RainbowButton>Start your Analysis!</RainbowButton>
+        // </Link> */}
+    //   {/* <div className="lg:block hidden bg-white border rounded-2xl p-4">
+    //     <Image src="/image.png" className="rounded-xl" alt="landing_Image" width={500} height={200} />
+    //   </div> */}
+    //   {/* <div className="flex gap-4 ">
+    //     <div className="flex flex-wrap gap-8 w-1/2">
+    //       <CardGrid />
+    //     </div>
+    //     <div className="p-2 flex w-1/2">
+    //       <BigCard />
+    //     </div>
+    //   </div> */}
+    // </div>
+    <div>
+      <div className=" h-screen flex flex-col justify-center items-center">
+        <h1 className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</h1>
+        <h1 className="sm:text-2xl text-s font-semibold text-center">Developing and Safeguarding Organisations</h1>
+        <SparklesCore
+          background="transparent"
+          minSize={1}
+          maxSize={3}
+          particleDensity={300}
+          className="absolute inset-0"
+          particleColor=""
+        />
+        <Link className="flex justify-center mt-8 sm:mt-16" href={"/upload2"}>
           <RainbowButton>Start your Analysis!</RainbowButton>
-          </Link>
-        </div>
-        <div className="md:block hidden bg-white border rounded-2xl p-4">
-          <Image src="/image.png" className="rounded-xl" alt="landing_Image" width={500} height={200} />
-        </div>
+        </Link>
+        <div className="mt-32 flex justify-center">
+          <Image className="animate-bounce" src="/chevron-force-down.svg" alt="down_arrow" width={50} height={50} />
+        </div>      
       </div>
-      <div className="flex gap-4 ">
-        <div className="flex flex-wrap gap-8 w-1/2">
-          <CardGrid />
-        </div>
-        <div className="p-2 flex w-1/2">
-          <BigCard />
-        </div>
+      <div className="flex gap-4 flex-col md:flex-row">
+        <CardGrid />
+        <BigCard />
       </div>
     </div>
   )

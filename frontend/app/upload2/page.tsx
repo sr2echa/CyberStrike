@@ -102,7 +102,9 @@ export default function Page() {
 
   return (
     <div className=" min-h-screen bg-white text-black flex flex-col items-center justify-center p-4">
-      <h1 className="text-5xl md:text-7xl text-center font-bold mb-4">Upload Security Audit File</h1>
+      <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">
+        Upload Security Audit File
+      </h1>
       <div className="w-full max-w-md">
         <div className="w-full max-w-4xl mx-auto min-h-96 border-dashed border-4 bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
           <FileUpload  onChange={handleFileUpload} />

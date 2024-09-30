@@ -62,7 +62,7 @@ const config: Config = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		backgroundImage: {
-  			'bg-texture': 'url("/bg-texture.png")'
+  			'ai-image': 'url("/image.png")'
   		},
   		animation: {
   			rainbow: 'rainbow var(--speed, 2s) infinite linear'
