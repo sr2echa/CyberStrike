@@ -1,14 +1,17 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { 
-  SparklesCore,
   HoverEffect,
-  RainbowButton
+  RainbowButton,
+  GoogleGeminiEffect,
 } from "@/components/ui";
 import { Shield, Zap, Lock, Cpu, ArrowRight, } from "lucide-react";
 import Image from "next/image";
-
+import { motion, useScroll, useTransform} from "framer-motion"
+import { cn } from "@/lib/utils";
+import { FlipWordsDemo } from "@/components/ui/google-gemini-effect";
 export default function Page(){
   return(
     <div className="p-8">
@@ -19,45 +22,10 @@ export default function Page(){
 
 export function LandingSection(){
   return(
-    // <div className="flex h-screen md:h-auto w-screen justify-center flex-col">
-    //   {/* <h1 className="text-5xl sm:text-8xl font-semibold text-center">CyberStrike</h1> */}
-    //   {/* <h1 className="text-2xl font-semibold text-center">Developing and Safeguarding Organisations</h1> */}
-        
-    //     {/* <SparklesCore
-    //       background="transparent"
-    //       minSize={1}
-    //       maxSize={3}
-    //       particleDensity={300}
-    //       className="absolute inset-0"
-    //       particleColor=""
-    //     /> */}
-        // {/* <Link href={"/upload2"}>
-        // <RainbowButton>Start your Analysis!</RainbowButton>
-        // </Link> */}
-    //   {/* <div className="lg:block hidden bg-white border rounded-2xl p-4">
-    //     <Image src="/image.png" className="rounded-xl" alt="landing_Image" width={500} height={200} />
-    //   </div> */}
-    //   {/* <div className="flex gap-4 ">
-    //     <div className="flex flex-wrap gap-8 w-1/2">
-    //       <CardGrid />
-    //     </div>
-    //     <div className="p-2 flex w-1/2">
-    //       <BigCard />
-    //     </div>
-    //   </div> */}
-    // </div>
     <div>
-      <div className=" h-screen flex flex-col justify-center items-center">
-        <h1 className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</h1>
-        <h1 className="sm:text-2xl text-s font-semibold text-center">Developing and Safeguarding Organisations</h1>
-        <SparklesCore
-          background="transparent"
-          minSize={1}
-          maxSize={3}
-          particleDensity={300}
-          className="absolute inset-0"
-          particleColor=""
-        />
+      <div className="sm:hidden h-screen flex flex-col justify-center items-center">
+        <motion.div className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</motion.div>
+        <FlipWordsDemo />        
         <Link className="flex justify-center mt-8 sm:mt-16" href={"/upload2"}>
           <RainbowButton>Start your Analysis!</RainbowButton>
         </Link>
@@ -65,7 +33,9 @@ export function LandingSection(){
           <Image className="animate-bounce" src="/chevron-force-down.svg" alt="down_arrow" width={50} height={50} />
         </div>      
       </div>
-      <div className="flex gap-4 flex-col md:flex-row">
+
+      <GoogleGeminiEffectDemo />
+      <div className="flex gap-4 mt-16 flex-col md:flex-row">
         <CardGrid />
         <BigCard />
       </div>
@@ -132,4 +102,34 @@ export const Things = [
   },
 ];
 
+export function GoogleGeminiEffectDemo() {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
 
+  const pathLengthFirst = useTransform(scrollYProgress, [0, 0.8], [0.2, 1.2]);
+  const pathLengthSecond = useTransform(scrollYProgress, [0, 0.8], [0.15, 1.2]);
+  const pathLengthThird = useTransform(scrollYProgress, [0, 0.8], [0.1, 1.2]);
+  const pathLengthFourth = useTransform(scrollYProgress, [0, 0.8], [0.05, 1.2]);
+  const pathLengthFifth = useTransform(scrollYProgress, [0, 0.8], [0, 1.2]);
+
+  return (
+    <div
+      className="h-[400vh] sm:block hidden  w-full dark:border dark:border-white/[0.1] rounded-md relative pt-40 overflow-clip"
+      ref={ref}
+    >
+      <GoogleGeminiEffect
+        pathLengths={[
+          pathLengthFirst,
+          pathLengthSecond,
+          pathLengthThird,
+          pathLengthFourth,
+          pathLengthFifth,
+        ]}
+      />
+      
+    </div>
+  );
+}

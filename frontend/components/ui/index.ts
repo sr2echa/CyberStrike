@@ -7,6 +7,7 @@ import { SparklesCore } from "./sparkles";
 import { HoverEffect } from "./card-hover-effect";
 import { RainbowButton } from "./rainbow-button";
 import { FileUpload } from "./file-upload";
+import { GoogleGeminiEffect } from "./google-gemini-effect";
 
 export {
     GlowingStarsBackgroundCard,
@@ -19,5 +20,6 @@ export {
     SparklesCore,
     HoverEffect,
     RainbowButton,
-    FileUpload
+    FileUpload,
+    GoogleGeminiEffect,
 }
