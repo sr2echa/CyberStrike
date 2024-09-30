@@ -36,7 +36,7 @@ const summary =
   "The security audit reveals several critical vulnerabilities that require immediate attention. Key areas of concern include insufficient penetration testing, inadequate cybersecurity resources, and a lack of comprehensive employee training. The organization also faces risks from third-party service providers and outdated firewall rules. Implementing the suggested mitigations will significantly improve the overall security posture.";
 
 export default function Analyze() {
-  const backendUrl = "https://a8fa-2406-7400-c8-d322-a344-c630-8ad-e88.ngrok-free.app";
+  const backendUrl = "https://a44a-2406-7400-c8-676b-428c-454c-386e-3fb9.ngrok-free.app";
 
   //get the url
   const url = usePathname();

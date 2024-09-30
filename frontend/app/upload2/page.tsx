@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, File, Loader } from "lucide-react";
-import { 
-  Button,
-  RainbowButton,
-  FileUpload
- } from "@/components/ui";
+import { Button, RainbowButton, FileUpload } from "@/components/ui";
 
 export default function Page() {
   const backendUrl = "https://a44a-2406-7400-c8-676b-428c-454c-386e-3fb9.ngrok-free.app";
@@ -101,16 +97,16 @@ export default function Page() {
   };
 
   return (
-    <div className=" min-h-screen bg-white text-black flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-white text-black flex flex-col items-center justify-center p-4">
       <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">
         Upload Security Audit File
       </h1>
       <div className="w-full max-w-md">
         <div className="w-full max-w-4xl mx-auto min-h-96 border-dashed border-4 bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
-          <FileUpload  onChange={handleFileUpload} />
+          <FileUpload onChange={handleFileUpload} />
         </div>
         <RainbowButton
-          className={`w-full mt-4 transition-colors p-4 rounded-xl ${
+          className={`w-full mt-4 transition-colors p-4 rounded-xl flex items-center justify-center ${
             isLoading || !file
               ? "bg-gray-400 text-gray-600 cursor-not-allowed"
               : "bg-black text-white hover:bg-gray-800"
@@ -121,7 +117,7 @@ export default function Page() {
           {isLoading ? (
             <>
               <Loader className="w-4 h-4 mr-2 animate-spin" />
-              Processing...
+              <span>Processing...</span>
             </>
           ) : file ? (
             "Analyze Security Audit"
