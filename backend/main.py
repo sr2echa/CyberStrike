@@ -74,12 +74,12 @@ class ChatRequest(BaseModel):
     history: List[ChatMessage] = []
 
 class FileInfoResponse(BaseModel):
-    filename: str
-    size: int
-    upload_time: str
-    last_modified: str
-    created_at: str
+    file_name: str
+    file_size: str
+    last_edited: str
     page_count: int
+    author: str
+    created_at: str
 
 class KeyFindingsResponse(BaseModel):
     findings: Dict[str, Any]
@@ -168,13 +168,22 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
 @app.get("/fileinfo/{file_id}", response_model=FileInfoResponse)
 async def get_file_info(file_id: str):
     doc_info = get_document_info(file_id)
+    if not doc_info:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Convert file size to MB
+    file_size_mb = f"{doc_info['size'] / (1024 * 1024):.1f} MB"
+    
+    # Extract date from last_modified
+    last_edited = doc_info["last_modified"].split()[0]
+    
     return FileInfoResponse(
-        filename=doc_info["filename"],
-        size=doc_info["size"],
-        upload_time=doc_info["upload_time"],
-        last_modified=doc_info["last_modified"],
-        created_at=doc_info["created_at"],
-        page_count=doc_info["page_count"]
+        file_name=doc_info["filename"],
+        file_size=file_size_mb,
+        last_edited=last_edited,
+        page_count=doc_info["page_count"],
+        author="Security Team",  # You may need to add this field to your document processing
+        created_at=doc_info["created_at"].split()[0]  # Extract date only
     )
 
 @app.post("/chat")
