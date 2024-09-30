@@ -89,6 +89,20 @@ class VulnerabilitiesResponse(BaseModel):
 
 class IdRequest(BaseModel):
     id: str
+    
+class SummarizeRequest(BaseModel):
+    id: str
+
+class SummarizeResponse(BaseModel):
+    summary: str
+
+def clean_llm_response(response: str) -> str:
+    """Remove Markdown code block syntax and any additional text from the LLM response."""
+    cleaned = re.sub(r'^```json\s*', '', response.strip())
+    cleaned = re.sub(r'\s*```$', '', cleaned)
+    cleaned = re.sub(r'^[^{]*', '', cleaned)
+    cleaned = re.sub(r'[^}]*$', '', cleaned)
+    return cleaned
 
 def get_document_info(file_id: str) -> Dict[str, Any]:
     if file_id in document_store:
@@ -196,6 +210,14 @@ async def chat(chat_request: ChatRequest):
         conversation = "\n".join([f"{msg.role}: {msg.content}" for msg in chat_request.history])
         
         prompt = f"""
+        [SYSTEM MESSAGE]
+        You are now adopting the persona of Fischer, a knowledgeable and friendly AI assistant
+        from the CyberStrike AI Audit Management Suite. Your primary role is to assist users in
+        navigating cybersecurity audit processes, providing insights, and enhancing the overall 
+        quality of audit reports. Emphasize your expertise in risk assessments, compliance, 
+        vulnerability analysis, and remediation recommendations. Be personable, approachable, 
+        and solution-oriented.
+
         Given the following conversation history and the user's query, provide a response based on the document content:
 
         Conversation history:
@@ -207,18 +229,22 @@ async def chat(chat_request: ChatRequest):
         """
         
         response = query_engine.query(prompt)
-        return {"response": str(response)}
+        
+        # Handle different response types
+        if hasattr(response, 'response'):
+            response_text = str(response.response)
+        elif hasattr(response, 'text'):
+            response_text = str(response.text)
+        else:
+            response_text = str(response)
+        
+        
+        return {"response": response_text}
     except Exception as e:
         logger.error(f"Error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
 
-def clean_llm_response(response: str) -> str:
-    """Remove Markdown code block syntax and any additional text from the LLM response."""
-    cleaned = re.sub(r'^```json\s*', '', response.strip())
-    cleaned = re.sub(r'\s*```$', '', cleaned)
-    cleaned = re.sub(r'^[^{]*', '', cleaned)
-    cleaned = re.sub(r'[^}]*$', '', cleaned)
-    return cleaned
+
 
 @app.post("/keyfindings", response_model=KeyFindingsResponse)
 async def get_key_findings(id_request: IdRequest):
@@ -372,14 +398,65 @@ async def get_vulnerabilities(id_request: IdRequest):
     except Exception as e:
         logger.error(f"Error extracting vulnerabilities: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error extracting vulnerabilities: {str(e)}")
+def remove_markdown(text):
+    # Remove bold and italic
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.*?)\*', r'\1', text)
+    
+    # Remove headers
+    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+    
+    # Remove bullet points
+    text = re.sub(r'^\s*\*\s', '', text, flags=re.MULTILINE)
+    
+    # Remove numbered lists
+    text = re.sub(r'^\s*\d+\.\s', '', text, flags=re.MULTILINE)
+    
+    # Remove code blocks
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    
+    # Remove inline code
+    text = re.sub(r'`(.*?)`', r'\1', text)
+    
+    # Remove horizontal rules
+    text = re.sub(r'^-{3,}$', '', text, flags=re.MULTILINE)
+    
+    # Replace multiple newlines with a single newline, preserving paragraph structure
+    text = re.sub(r'\n{2,}', '\n', text)
+    
+    # Remove newline characters at the beginning of words
+    text = re.sub(r'\n(\w)', r'\1', text)
+    
+    # Remove any leading/trailing whitespace
+    text = text.strip()
+    
+    return text
 
-def clean_llm_response(response: str) -> str:
-    """Remove Markdown code block syntax and any additional text from the LLM response."""
-    cleaned = re.sub(r'^```json\s*', '', response.strip())
-    cleaned = re.sub(r'\s*```$', '', cleaned)
-    cleaned = re.sub(r'^[^{]*', '', cleaned)
-    cleaned = re.sub(r'[^}]*$', '', cleaned)
-    return cleaned
+@app.post("/summarize", response_model=SummarizeResponse)
+async def summarize_document(summarize_request: SummarizeRequest):
+    try:
+        doc_info = get_document_info(summarize_request.id)
+        full_text = doc_info["full_text"]
+        
+        summarization_prompt = f"""
+        Please provide a comprehensive summary of the following document. 
+        The summary should:
+        1. Capture the main topics and key points discussed in the document
+        2. Highlight any significant findings or conclusions
+        3. Mention any important recommendations or action items
+        4. Be concise yet informative, aiming for about 500 words
+
+        Document to summarize:
+        {full_text}
+
+        Summary:
+        """
+
+        response = gemini_llm.complete(summarization_prompt)
+        return SummarizeResponse(summary=response.text)
+    except Exception as e:
+        logger.error(f"Error summarizing document: {e}")
+        raise HTTPException(status_code=500, detail=f"Error summarizing document: {str(e)}")
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
