@@ -8,6 +8,7 @@ import { HoverEffect } from "./card-hover-effect";
 import { RainbowButton } from "./rainbow-button";
 import { FileUpload } from "./file-upload";
 import { GoogleGeminiEffect } from "./google-gemini-effect";
+import { MacbookScrollDemo } from "./MacbookScrollDemo";
 
 export {
     GlowingStarsBackgroundCard,
@@ -22,4 +23,5 @@ export {
     RainbowButton,
     FileUpload,
     GoogleGeminiEffect,
+    MacbookScrollDemo
 }

@@ -51,7 +51,7 @@ export const HoverEffect = ({
           </AnimatePresence>
           <Card>
             <CardTitle>
-              <div className="flex flex-col items-start gap-4">
+              <div className="flex flex-col text-xl items-start gap-4">
                 <div className="border-2 p-4 rounded-full">
                   {item.icon}
                 </div>
