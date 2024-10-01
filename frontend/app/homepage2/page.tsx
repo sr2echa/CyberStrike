@@ -13,6 +13,8 @@ import Image from "next/image";
 import { motion, useScroll, useTransform} from "framer-motion"
 import { FlipWordsDemo } from "@/components/ui/google-gemini-effect";
 import { MacbookScroll } from "@/components/ui/macbook-scroll";
+import { ModeToggle } from "@/components/ui";
+
 export default function Page(){
   return(
     <div className="p-8">
@@ -24,6 +26,7 @@ export default function Page(){
 export function LandingSection(){
   return(
     <div>
+      <ModeToggle />
       <div className="sm:hidden h-screen flex flex-col justify-center items-center">
         <motion.div className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</motion.div>
         <FlipWordsDemo />        

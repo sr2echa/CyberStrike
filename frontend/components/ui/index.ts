@@ -18,6 +18,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "./dropdown-menu"
+  import { ModeToggle } from "./toggle";
 
   
 export {
@@ -41,4 +42,5 @@ export {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    ModeToggle
 }
