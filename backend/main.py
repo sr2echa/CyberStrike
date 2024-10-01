@@ -12,10 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from llama_index.llms.gemini import Gemini
-from llama_index.core import Document, Settings, VectorStoreIndex
+from llama_index.core import Document, Settings, VectorStoreIndex, SummaryIndex
 from llama_index.core.node_parser import SentenceSplitter
 from langchain.embeddings import HuggingFaceEmbeddings
 from llama_index.embeddings.langchain import LangchainEmbedding
+from llama_index.core.tools import QueryEngineTool
+from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
+from llama_index.core.selectors import LLMSingleSelector
 import fitz
 import pymupdf4llm
 
@@ -49,7 +52,7 @@ except Exception as e:
 if not gemini_llm:
     raise ValueError("Failed to initialize Gemini LLM. Please check your Google API key.")
 
-Settings.embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2"))
+Settings.embed_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 # In-memory storage for document embeddings and metadata
 document_store = {}
@@ -141,6 +144,56 @@ async def upload_document(upload_request: UploadRequest, background_tasks: Backg
         logger.error(f"Error processing upload: {e}")
         raise HTTPException(status_code=500, detail="Error processing upload")
 
+class DocumentProcessor:
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        self.full_text = None
+        self.nodes = None
+        self.summary_index = None
+        self.vector_index = None
+
+    def process(self):
+        self.full_text = pymupdf4llm.to_markdown(self.file_path)
+        document = Document(text=self.full_text)
+        splitter = SentenceSplitter(chunk_size=1024)
+        self.nodes = splitter.get_nodes_from_documents([document])
+        self.summary_index = SummaryIndex(self.nodes)
+        self.vector_index = VectorStoreIndex(self.nodes)
+
+# Add a new QueryEngineBuilder class
+class QueryEngineBuilder:
+    def __init__(self, summary_index: SummaryIndex, vector_index: VectorStoreIndex):
+        self.summary_index = summary_index
+        self.vector_index = vector_index
+        self.query_engine = None
+
+    def build_query_engine(self):
+        summary_query_engine = self.summary_index.as_query_engine(
+            response_mode="tree_summarize",
+            use_async=True,
+        )
+        vector_query_engine = self.vector_index.as_query_engine()
+
+        summary_tool = QueryEngineTool.from_defaults(
+            query_engine=summary_query_engine,
+            description="Useful for summarization questions related to the Document"
+        )
+
+        vector_tool = QueryEngineTool.from_defaults(
+            query_engine=vector_query_engine,
+            description="Useful for retrieving specific context from the Document."
+        )
+
+        self.query_engine = RouterQueryEngine(
+            selector=LLMSingleSelector.from_defaults(),
+            query_engine_tools=[summary_tool, vector_tool],
+            verbose=True
+        )
+
+# Modify the document_store to include the new query engine
+document_store = {}
+
+# Modify the process_document function
 async def process_document(file_path: str, file_hash: str, original_filename: str):
     try:
         file_stat = os.stat(file_path)
@@ -150,18 +203,17 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
         
         doc = fitz.open(file_path)
         page_count = len(doc)
-        full_text = pymupdf4llm.to_markdown(file_path)
         doc.close()
 
-        document = Document(text=full_text)
-        splitter = SentenceSplitter(chunk_size=1024)
-        nodes = splitter.get_nodes_from_documents([document])
+        processor = DocumentProcessor(file_path)
+        processor.process()
         
-        index = VectorStoreIndex(nodes)
+        query_engine_builder = QueryEngineBuilder(processor.summary_index, processor.vector_index)
+        query_engine_builder.build_query_engine()
         
         doc_info = {
-            "index": index,
-            "full_text": full_text,
+            "query_engine": query_engine_builder.query_engine,
+            "full_text": processor.full_text,
             "filename": original_filename,
             "size": file_size,
             "upload_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -171,7 +223,7 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
         }
         
         document_store[file_hash] = doc_info
-        info_to_save = {k: v for k, v in doc_info.items() if k != 'index'}
+        info_to_save = {k: v for k, v in doc_info.items() if k not in ['query_engine', 'full_text']}
         info_path = os.path.join(UPLOADS_DIR, f"{file_hash}_info.json")
         with open(info_path, "w") as f:
             json.dump(info_to_save, f, default=str)
@@ -179,33 +231,12 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
     except Exception as e:
         logger.error(f"Error processing document: {e}")
 
-@app.get("/fileinfo/{file_id}", response_model=FileInfoResponse)
-async def get_file_info(file_id: str):
-    doc_info = get_document_info(file_id)
-    if not doc_info:
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    # Convert file size to MB
-    file_size_mb = f"{doc_info['size'] / (1024 * 1024):.1f} MB"
-    
-    # Extract date from last_modified
-    last_edited = doc_info["last_modified"].split()[0]
-    
-    return FileInfoResponse(
-        file_name=doc_info["filename"],
-        file_size=file_size_mb,
-        last_edited=last_edited,
-        page_count=doc_info["page_count"],
-        author="Security Team",  # You may need to add this field to your document processing
-        created_at=doc_info["created_at"].split()[0]  # Extract date only
-    )
-
+# Modify the chat endpoint
 @app.post("/chat")
 async def chat(chat_request: ChatRequest):
     try:
         doc_info = get_document_info(chat_request.id)
-        index = doc_info["index"]
-        query_engine = index.as_query_engine()
+        query_engine = doc_info["query_engine"]
         
         conversation = "\n".join([f"{msg.role}: {msg.content}" for msg in chat_request.history])
         
@@ -238,11 +269,75 @@ async def chat(chat_request: ChatRequest):
         else:
             response_text = str(response)
         
-        
         return {"response": response_text}
     except Exception as e:
         logger.error(f"Error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
+
+@app.get("/fileinfo/{file_id}", response_model=FileInfoResponse)
+async def get_file_info(file_id: str):
+    doc_info = get_document_info(file_id)
+    if not doc_info:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Convert file size to MB
+    file_size_mb = f"{doc_info['size'] / (1024 * 1024):.1f} MB"
+    
+    # Extract date from last_modified
+    last_edited = doc_info["last_modified"].split()[0]
+    
+    return FileInfoResponse(
+        file_name=doc_info["filename"],
+        file_size=file_size_mb,
+        last_edited=last_edited,
+        page_count=doc_info["page_count"],
+        author="Security Team",  # You may need to add this field to your document processing
+        created_at=doc_info["created_at"].split()[0]  # Extract date only
+    )
+
+# @app.post("/chat")
+# async def chat(chat_request: ChatRequest):
+#     try:
+#         doc_info = get_document_info(chat_request.id)
+#         index = doc_info["index"]
+#         query_engine = index.as_query_engine()
+        
+#         conversation = "\n".join([f"{msg.role}: {msg.content}" for msg in chat_request.history])
+        
+#         prompt = f"""
+#         [SYSTEM MESSAGE]
+#         You are now adopting the persona of Fischer, a knowledgeable and friendly AI assistant
+#         from the CyberStrike AI Audit Management Suite. Your primary role is to assist users in
+#         navigating cybersecurity audit processes, providing insights, and enhancing the overall 
+#         quality of audit reports. Emphasize your expertise in risk assessments, compliance, 
+#         vulnerability analysis, and remediation recommendations. Be personable, approachable, 
+#         and solution-oriented.
+
+#         Given the following conversation history and the user's query, provide a response based on the document content:
+
+#         Conversation history:
+#         {conversation}
+
+#         User query: {chat_request.query}
+
+#         Respond to the user's query using information from the document:
+#         """
+        
+#         response = query_engine.query(prompt)
+        
+#         # Handle different response types
+#         if hasattr(response, 'response'):
+#             response_text = str(response.response)
+#         elif hasattr(response, 'text'):
+#             response_text = str(response.text)
+#         else:
+#             response_text = str(response)
+        
+        
+#         return {"response": response_text}
+#     except Exception as e:
+#         logger.error(f"Error in chat: {str(e)}")
+#         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
 
 
 
@@ -398,39 +493,7 @@ async def get_vulnerabilities(id_request: IdRequest):
     except Exception as e:
         logger.error(f"Error extracting vulnerabilities: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error extracting vulnerabilities: {str(e)}")
-def remove_markdown(text):
-    # Remove bold and italic
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-    text = re.sub(r'\*(.*?)\*', r'\1', text)
-    
-    # Remove headers
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-    
-    # Remove bullet points
-    text = re.sub(r'^\s*\*\s', '', text, flags=re.MULTILINE)
-    
-    # Remove numbered lists
-    text = re.sub(r'^\s*\d+\.\s', '', text, flags=re.MULTILINE)
-    
-    # Remove code blocks
-    text = re.sub(r'```[\s\S]*?```', '', text)
-    
-    # Remove inline code
-    text = re.sub(r'`(.*?)`', r'\1', text)
-    
-    # Remove horizontal rules
-    text = re.sub(r'^-{3,}$', '', text, flags=re.MULTILINE)
-    
-    # Replace multiple newlines with a single newline, preserving paragraph structure
-    text = re.sub(r'\n{2,}', '\n', text)
-    
-    # Remove newline characters at the beginning of words
-    text = re.sub(r'\n(\w)', r'\1', text)
-    
-    # Remove any leading/trailing whitespace
-    text = text.strip()
-    
-    return text
+
 
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize_document(summarize_request: SummarizeRequest):
