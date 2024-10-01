@@ -24,6 +24,7 @@ import { IconCommand } from "@tabler/icons-react";
 import { IconCaretLeftFilled } from "@tabler/icons-react";
 import { IconCaretDownFilled } from "@tabler/icons-react";
 import Image from "next/image";
+import { FlipWordsDemo } from "./google-gemini-effect";
 
 export const MacbookScroll = ({
   src,
@@ -60,7 +61,7 @@ export const MacbookScroll = ({
     [0, 0.3],
     [0.6, isMobile ? 1 : 1.5]
   );
-  const translate = useTransform(scrollYProgress, [0, 1], [0, 1500]);
+  const translate = useTransform(scrollYProgress, [0, 1], [0, 600]);
   const rotate = useTransform(scrollYProgress, [0.1, 0.12, 0.3], [-28, -28, 0]);
   const textTransform = useTransform(scrollYProgress, [0, 0.3], [0, 100]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -77,11 +78,12 @@ export const MacbookScroll = ({
         }}
         className="dark:text-white text-neutral-800 text-3xl font-bold mb-20 text-center"
       >
-        {title || (
-          <span>
-            This Macbook is built with Tailwindcss. <br /> No kidding.
-          </span>
-        )}
+        <p className="text-5xl md:text-7xl font-bold text-black pb-4 text-center">
+          {title || `CyberStrike`}
+        </p>
+        <div className="text-centera mx-w-lg mx-auto">
+          <FlipWordsDemo />
+        </div>
       </motion.h2>
       {/* Lid */}
       <Lid

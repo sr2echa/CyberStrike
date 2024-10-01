@@ -4,7 +4,6 @@ import { motion, MotionValue } from "framer-motion";
 import Link from "next/link";
 import React from "react";
 import { RainbowButton } from "./rainbow-button";
-import Image from "next/image";
 import { FlipWords } from "./flip-words";
 
 const transition = {

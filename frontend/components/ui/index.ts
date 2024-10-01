@@ -9,7 +9,17 @@ import { RainbowButton } from "./rainbow-button";
 import { FileUpload } from "./file-upload";
 import { GoogleGeminiEffect } from "./google-gemini-effect";
 import { MacbookScrollDemo } from "./MacbookScrollDemo";
+import { ThemeProvider } from "./theme-provider";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from "./dropdown-menu"
 
+  
 export {
     GlowingStarsBackgroundCard,
     GlowingStarsDescription,
@@ -23,5 +33,12 @@ export {
     RainbowButton,
     FileUpload,
     GoogleGeminiEffect,
-    MacbookScrollDemo
+    MacbookScrollDemo,
+    ThemeProvider,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 }

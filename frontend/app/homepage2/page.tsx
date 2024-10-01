@@ -35,7 +35,6 @@ export function LandingSection(){
         </div>      
       </div>
 
-      <GoogleGeminiEffectDemo />
       <div>
         <MacbookScrollDemo />
       </div>
@@ -43,6 +42,7 @@ export function LandingSection(){
         <CardGrid />
         <BigCard />
       </div>
+      <GoogleGeminiEffectDemo />
     </div>
   )
 }
