@@ -2,12 +2,12 @@ fastapi[standard]
 uvicorn
 pydantic
 python-multipart
+llama_index
 llama-index.core
 llama-index.llms.gemini
 llama_index.embeddings.langchain
 langchain-community
 sentence-transformers
-pymupdf
 pymupdf4llm
 google-generativeai
 nest-asyncio
