@@ -12,8 +12,6 @@ import { Shield, Zap, Lock, Cpu, ArrowRight, } from "lucide-react";
 import Image from "next/image";
 import { motion, useScroll, useTransform} from "framer-motion"
 import { FlipWordsDemo } from "@/components/ui/google-gemini-effect";
-import { MacbookScroll } from "@/components/ui/macbook-scroll";
-import { ModeToggle } from "@/components/ui";
 
 export default function Page(){
   return(
@@ -26,7 +24,7 @@ export default function Page(){
 export function LandingSection(){
   return(
     <div>
-      <ModeToggle />
+      {/* <ModeToggle /> */}
       <div className="sm:hidden h-screen flex flex-col justify-center items-center">
         <motion.div className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</motion.div>
         <FlipWordsDemo />        
@@ -41,7 +39,7 @@ export function LandingSection(){
       <div className="sm:block hidden">
         <MacbookScrollDemo />
       </div>
-      <div className="flex gap-4 mt-16 flex-col md:flex-row justify-center items-center py-5">
+      <div className="flex gap-4 mt-16 flex-col md:flex-row py-5">
         <CardGrid />
         <BigCard />
       </div>
@@ -52,7 +50,7 @@ export function LandingSection(){
 
 export function BigCard(){
   return(
-    <div className="flex dark:bg-gray-900/50 w-full bg-white justify-center items-center flex-col gap-8 border-2 rounded-xl px-8 py-16">
+    <div className="flex m-2 dark:bg-[#0a0a0a] w-full bg-white justify-center items-center flex-col gap-8 border-2 rounded-xl px-8 py-16">
 
       <div className="flex flex-col gap-4">
         <div className="text-5xl font-extrabold text-center">
@@ -124,7 +122,7 @@ export function GoogleGeminiEffectDemo() {
 
   return (
     <div
-      className="h-[400vh] sm:block hidden  w-full dark:border dark:border-white/[0.1] rounded-md relative pt-40 overflow-clip"
+      className="h-[300vh] sm:block hidden w-full rounded-md relative pt-20 overflow-clip"
       ref={ref}
     >
       <GoogleGeminiEffect

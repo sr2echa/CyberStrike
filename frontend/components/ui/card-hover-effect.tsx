@@ -78,7 +78,7 @@ export const Card = ({
   return (
     <div
       className={cn(
-        "bg-white dark:bg-gray-900/50 dark:text-white items-start flex-col gap-8 border shadow-xl rounded-xl px-4 py-6 h-full w0full relative z-20",
+        "bg-white dark:bg-[#0a0a0a] dark:text-white items-start flex-col gap-8 border shadow-xl rounded-xl px-4 py-6 h-full w0full relative z-20",
         className
       )}
     >
