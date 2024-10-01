@@ -5,7 +5,7 @@ import Image from "next/image";
 
 export function MacbookScrollDemo() {
   return (
-    <div className="overflow-hidden dark:bg-[#0B0B0F] bg-white w-full">
+    <div className="overflow-hidden dark:bg-[#0a0a0a] rounded-xl bg-white w-full">
       <MacbookScroll
         title={
           <span>
@@ -13,8 +13,8 @@ export function MacbookScrollDemo() {
           </span>
         }
         badge={
-          <Link href="https://peerlist.io/manuarora">
-            <Badge className="h-10 w-10 transform -rotate-12 border-2 border-black" />
+          <Link href="/">
+            <Badge />
           </Link>
         }
         src={`/laptopImage.png`}
@@ -24,8 +24,8 @@ export function MacbookScrollDemo() {
   );
 }
 
-const Badge = ({ className }: { className?: string }) => {
+const Badge = () => {
   return (
-    <Image className="" src="/geminiLogo.png" alt="peerlist" width={40} height={40}/>
+    <Image src="/geminiLogo.png" alt="peerlist" width={40} height={40}/>
   );
 };

@@ -78,8 +78,8 @@ export const MacbookScroll = ({
         }}
         className="dark:text-white text-neutral-800 text-3xl font-bold mb-20 text-center"
       >
-        <p className="text-5xl md:text-7xl font-bold text-black pb-4 text-center">
-          {title || `CyberStrike`}
+        <p className="text-5xl md:text-7xl dark:text-white font-bold text-black pb-4 text-center">
+          {`CyberStrike`}
         </p>
         <div className="text-centera mx-w-lg mx-auto">
           <FlipWordsDemo />

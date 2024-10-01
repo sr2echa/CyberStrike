@@ -24,8 +24,8 @@ export const GoogleGeminiEffect = ({
 }) => {
   return (
     <div className={cn("sticky top-80", className)}>
-      <p className="text-5xl md:text-7xl font-bold text-black pb-4 text-center">
-        {title || `CyberStrike`}
+      <p className="text-5xl md:text-7xl dark:text-white font-bold text-black pb-4 text-center">
+       Team Fischer
       </p>
       <div className="text-centera mx-w-lg mx-auto">
         <FlipWordsDemo />
@@ -164,14 +164,14 @@ export const GoogleGeminiEffect = ({
 };
 
 export function FlipWordsDemo() {
-  const words = ["better", "cute", "beautiful", "modern"];
+  const words = ["Organisations", "Enterprises", "Individuals", "modern"];
  
   return (
-    <div className="text-center flex justify-center items-center px-4">
+    <div className="text-center font-semibold flex justify-center items-center px-4">
       <div className="sm:text-3xl text-lg mx-auto font-normal text-neutral-600 dark:text-neutral-400">
-        Build
+        Securing and Empowering
         <FlipWords words={words} /> <br />
-        websites with Aceternity UI
+        with GenAI
       </div>
     </div>
   );
