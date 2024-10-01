@@ -97,8 +97,8 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col items-center justify-center p-4">
-      <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">
+    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-black flex flex-col items-center justify-center p-4">
+      <h1 className="text-4xl dark:text-white md:text-5xl font-bold mb-8 text-center">
         Upload Security Audit File
       </h1>
       <div className="w-full max-w-md">
