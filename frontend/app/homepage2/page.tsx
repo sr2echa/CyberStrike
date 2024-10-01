@@ -15,7 +15,7 @@ import { FlipWordsDemo } from "@/components/ui/google-gemini-effect";
 
 export default function Page(){
   return(
-    <div className="p-8">
+    <div >
       <LandingSection />
     </div>
   )
@@ -39,11 +39,14 @@ export function LandingSection(){
       <div className="sm:block hidden">
         <MacbookScrollDemo />
       </div>
-      <div className="flex gap-4 mt-16 flex-col md:flex-row py-5">
+      <div className="flex gap-4 mt-16 flex-col lg:flex-row px-4 py-5">
         <CardGrid />
         <BigCard />
       </div>
       <GoogleGeminiEffectDemo />
+      <div>
+        <p className="text-center pb-4">Made with 💖 by <span className="font-extrabold">Team Fischer - </span> <a className="underline" href="https://github.com/sr2echa">Sreecha</a> , <a className="underline" href="https://github.com/wreckage0907">Girish </a> , <a className="underline" href="https://github.com/TobyVincentJohn">Toby</a> & <a className="underline" href="https://github.com/Akkilesh-A">Akkilesh</a></p>
+      </div>
     </div>
   )
 }
