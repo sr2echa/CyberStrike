@@ -13,7 +13,7 @@ export function MacbookScrollDemo() {
           </span>
         }
         badge={
-          <Link href="/">
+          <Link target="_blank" href="https://github.com/sr2echa/CyberStrike">
             <Badge />
           </Link>
         }
@@ -26,6 +26,9 @@ export function MacbookScrollDemo() {
 
 const Badge = () => {
   return (
-    <Image src="/geminiLogo.png" alt="peerlist" width={40} height={40}/>
+    <div>
+      <Image className="hidden dark:block" src="/lightGithubLogo.png" alt="peerlist" width={40} height={40}/>
+      <Image className="dark:hidden" src="/githubLogo.png" alt="peerlist" width={40} height={40}/>
+    </div>
   );
 };
