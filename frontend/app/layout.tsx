@@ -57,9 +57,9 @@ export default function RootLayout({
                 />
               </Link>
               <div className="flex gap-4 items-center">
-                <div className="p-2 rounded-md border ">
+                <a target="_blank" href="https://github.com/sr2echa/CyberStrike" className="p-2 rounded-md border ">
                   <GitHubLogoIcon width={20} height={20} />
-                </div>
+                </a>
                 <div className="dark:text-[#262626] text-[#e5e5e5]">{"|"}</div>
                 <ModeToggle />
               </div>
