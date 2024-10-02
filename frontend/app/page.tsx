@@ -6,13 +6,11 @@ import {
   HoverEffect,
   RainbowButton,
   GoogleGeminiEffect,
-  MacbookScrollDemo,
 } from "@/components/ui";
 import { Shield, Zap, Lock, Cpu, ArrowRight, } from "lucide-react";
 import Image from "next/image";
-import { motion, useScroll, useTransform} from "framer-motion"
+import { useScroll, useTransform} from "framer-motion"
 import { FlipWordsDemo } from "@/components/ui/google-gemini-effect";
-import { useTheme } from "next-themes";
 
 export default function Page(){
   return(
@@ -24,7 +22,6 @@ export default function Page(){
 
 export function LandingSection(){
 
-  const {theme,setTheme} = useTheme();
   return(
     <div>
       {/* <ModeToggle /> */}

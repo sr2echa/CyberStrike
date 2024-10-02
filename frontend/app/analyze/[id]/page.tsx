@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, } from "next/navigation";
 import {
   FileText,
   AlertTriangle,
@@ -13,8 +13,6 @@ import {
   Cpu,
   Lock,
   Calendar,
-  Clock,
-  Loader,
   Trash2,
   Loader2,
 } from "lucide-react";
@@ -57,14 +55,14 @@ interface ChatMessage {
 }
 
 // Mock data
-const fileAnalytics = {
-  fileName: "security_audit_2023.pdf",
-  fileSize: "2.5 MB",
-  lastEdited: "2023-09-15",
-  pageCount: 42,
-  author: "Security Team",
-  createdAt: "2023-09-01",
-};
+// const fileAnalytics = {
+//   fileName: "security_audit_2023.pdf",
+//   fileSize: "2.5 MB",
+//   lastEdited: "2023-09-15",
+//   pageCount: 42,
+//   author: "Security Team",
+//   createdAt: "2023-09-01",
+// };
 
 export default function Analyze() {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -326,7 +324,7 @@ export default function Analyze() {
               >
                 <ReactMarkdown
                   components={{
-                    code({ node, className, children, ...props }) {
+                    code({ children, ...props }) {
                       return (
                         <code className="bg-gray-300 dark:bg-gray-600 px-1 rounded" {...props}>
                           {children}
@@ -559,7 +557,7 @@ export default function Analyze() {
                           p: ({ children }) => (
                             <p className="text-gray-700 dark:text-gray-300">{children}</p>
                           ),
-                          code({ node, className, children, ...props }) {
+                          code({children, ...props }) {
                             return (
                               <code
                                 className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
@@ -581,7 +579,7 @@ export default function Analyze() {
                           p: ({ children }) => (
                             <p className="text-gray-700 dark:text-gray-300">{children}</p>
                           ),
-                          code({ node, className, children, ...props }) {
+                          code({ children, ...props }) {
                             return (
                               <code
                                 className="bg-gray-200 dark:bg-gray-700 px-1 rounded"

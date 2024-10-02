@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MotionValue, motion, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -29,12 +29,10 @@ import { FlipWordsDemo } from "./google-gemini-effect";
 export const MacbookScroll = ({
   src,
   showGradient,
-  title,
   badge,
 }: {
   src?: string;
   showGradient?: boolean;
-  title?: string | React.ReactNode;
   badge?: React.ReactNode;
 }) => {
   const ref = useRef<HTMLDivElement>(null);

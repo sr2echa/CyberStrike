@@ -13,13 +13,9 @@ const transition = {
 
 export const GoogleGeminiEffect = ({
   pathLengths,
-  title,
-  description,
   className,
 }: {
   pathLengths: MotionValue[];
-  title?: string;
-  description?: string;
   className?: string;
 }) => {
   return (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, File, Loader, Clock, GripVertical, Trash2 } from "lucide-react";
+import { Loader, Clock, GripVertical, Trash2 } from "lucide-react";
 import { Button, RainbowButton, FileUpload } from "@/components/ui";
 
 export default function Page() {
@@ -10,9 +10,7 @@ export default function Page() {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const router = useRouter();
-  const [files, setFiles] = useState<File[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== "undefined") {
@@ -59,30 +57,30 @@ export default function Page() {
     console.log(files);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && !isLoading) {
-      setFile(e.target.files[0]);
-    }
-  };
+  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files && !isLoading) {
+  //     setFile(e.target.files[0]);
+  //   }
+  // };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!isLoading) {
-      setIsDragging(true);
-    }
-  };
+  // const handleDragOver = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   if (!isLoading) {
+  //     setIsDragging(true);
+  //   }
+  // };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
+  // const handleDragLeave = () => {
+  //   setIsDragging(false);
+  // };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && !isLoading) {
-      setFile(e.dataTransfer.files[0]);
-    }
-  };
+  // const handleDrop = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   setIsDragging(false);
+  //   if (e.dataTransfer.files && !isLoading) {
+  //     setFile(e.dataTransfer.files[0]);
+  //   }
+  // };
 
   const handleUpload = async () => {
     if (file && !isLoading) {
