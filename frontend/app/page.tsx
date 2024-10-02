@@ -65,7 +65,7 @@ const LandingSection=()=>{
   )
 }
 
-export function BigCard(){
+function BigCard(){
   return(
     <div className="flex dark:bg-[#0a0a0a] w-full bg-white justify-center items-center flex-col gap-8 border-2 rounded-xl sm:px-48 sm:py-72 px-16 py-24">
 
@@ -91,7 +91,7 @@ export function BigCard(){
   )
 }
 
-export function CardGrid() {
+function CardGrid() {
   return (
     <div className="max-w-5xl mx-auto px-8">
       <HoverEffect items={Things} />
@@ -99,7 +99,7 @@ export function CardGrid() {
   );
 }
 
-export const Things = [
+const Things = [
   {
     icon: <Shield />,
     title: "Comprehensive Analysis",
@@ -124,7 +124,7 @@ export const Things = [
   },
 ];
 
-export function GoogleGeminiEffectDemo() {
+function GoogleGeminiEffectDemo() {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({
     target: ref,
