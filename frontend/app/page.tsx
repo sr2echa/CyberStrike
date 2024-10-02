@@ -59,7 +59,7 @@ const LandingSection=()=>{
         <BigCard />
       </div>
       <div className="pt-6 pb-4">
-        <p className="text-center font-mono lowercase pb-4">Made with 💖 by <span className="font-extrabold">Team Fischer</span> <a className="underline" href="https://github.com/sr2echa">Sreecha</a> , <a className="underline" href="https://github.com/wreckage0907">Girish</a> , <a className="underline" href="https://github.com/TobyVincentJohn">Toby</a> & <a className="underline" href="https://github.com/Akkilesh-A">Akkilesh</a></p>
+        <p className="text-center font-mono lowercase pb-4">Made with 💖 by <span className="font-extrabold ">Team Fischer</span> <a className="underline" href="https://github.com/sr2echa">Sreecha</a> , <a className="underline" href="https://github.com/wreckage0907">Girish</a> , <a className="underline" href="https://github.com/TobyVincentJohn">Toby</a> & <a className="underline" href="https://github.com/Akkilesh-A">Akkilesh</a></p>
       </div>
     </div>
   )
