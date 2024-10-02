@@ -119,9 +119,9 @@ export const Things = [
   },
   {
     icon: <Cpu />,
-    title: "Meta",
+    title: "AI-Powered Insights",
     description:
-      "A technology company that focuses on building products that advance Facebook's mission of bringing the world closer together.",
+      "Leverage the power of advanced machine learning for unparalleled analysis.",
   },
 ];
 
