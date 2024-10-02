@@ -12,15 +12,17 @@ import Image from "next/image";
 import { useScroll, useTransform} from "framer-motion"
 import { FlipWordsDemo } from "@/components/ui/google-gemini-effect";
 
-export default function Page(){
-  return(
-    <div >
-      <LandingSection />
-    </div>
-  )
-}
+// import React from 'react'
 
-export function LandingSection(){
+// const page = () => {
+//   return (
+//     <div>page</div>
+//   )
+// }
+
+// export default page
+
+const LandingSection=()=>{
 
   return(
     <div>
@@ -153,3 +155,5 @@ export function GoogleGeminiEffectDemo() {
     </div>
   );
 }
+
+export default LandingSection
