@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 .mermaid {
   font-family: Arial, sans-serif;
   font-size: 16px;
@@ -92,4 +91,23 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Customize website's scrollbar like Mac OS
+Not supports in Firefox and IE */
+
+::-webkit-scrollbar {
+  width: 7px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #73737561;
+  border-radius: 16px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #a0a0a5;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
 }

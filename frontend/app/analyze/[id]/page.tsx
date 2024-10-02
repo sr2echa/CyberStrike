@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import ReactMarkdown from "react-markdown";
+import Image from "next/image";
 
 // Mock data
 const fileAnalytics = {
@@ -188,7 +189,32 @@ export default function Analyze() {
     <div className="flex h-[calc(100vh-72px)]">
       {/* Chatbot Section */}
       <div className="w-1/2 p-4 flex flex-col overflow-hidden ml-3">
-        <div className="flex-grow overflow-y-auto mb-6 px-6 py-4 bg-gray-100 dark:bg-zinc-400/5 rounded-lg">
+        <div className="flex-grow overflow-y-auto mb-6 px-6 py-4 bg-gray-100 dark:bg-zinc-400/5 rounded-lg relative">
+          {chatMessages.length === 0 && (
+            <>
+              <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                <Image
+                  src="/whiteFischerLogo.png"
+                  alt="Fischer Logo light"
+                  width={200}
+                  height={200}
+                  className="hidden dark:block"
+                />
+                <Image
+                  src="/blackFischerLogo.png"
+                  alt="Fischer Logo dark"
+                  width={200}
+                  height={200}
+                  className="dark:hidden"
+                />
+              </div>
+              <div className="flex items-center justify-center">
+                <p className="text-lg font-semibold text-gray-400/50 dark:text-gray-600/40 font-mono">
+                  Chat with the audit report
+                </p>
+              </div>
+            </>
+          )}
           {chatMessages.map((msg, index) => (
             <div
               key={index}
@@ -198,7 +224,7 @@ export default function Analyze() {
                 className={`inline-block px-4 py-2 rounded-lg ${
                   msg.role === "user"
                     ? "bg-black text-white dark:bg-white dark:text-gray-900"
-                    : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+                    : "bg-gray-200 dark:bg-gray-800/50 dark:text-gray-300"
                 }`}
                 style={{ marginBottom: `${(chatMessages.length - index) * 4}px` }}
               >
