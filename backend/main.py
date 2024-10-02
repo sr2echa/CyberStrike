@@ -17,6 +17,8 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from llama_index.core.tools import QueryEngineTool
 from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
+from llama_index.core.indices.knowledge_graph.base import KnowledgeGraphIndex
+from llama_index.core import StorageContext
 import fitz
 import pymupdf4llm
 
@@ -149,6 +151,7 @@ class DocumentProcessor:
         self.nodes = None
         self.summary_index = None
         self.vector_index = None
+        self.kg_index = None
 
     def process(self):
         self.full_text = pymupdf4llm.to_markdown(self.file_path)
@@ -157,12 +160,23 @@ class DocumentProcessor:
         self.nodes = splitter.get_nodes_from_documents([document])
         self.summary_index = SummaryIndex(self.nodes)
         self.vector_index = VectorStoreIndex(self.nodes)
-
-# Add a new QueryEngineBuilder class
+        
+        # Create KnowledgeGraphIndex
+        storage_context = StorageContext.from_defaults()
+        self.kg_index = KnowledgeGraphIndex(
+            nodes=self.nodes,
+            storage_context=storage_context,
+            max_triplets_per_chunk=10,
+            include_embeddings=False,
+            show_progress=True,
+        )
+        self.kg_index._build_index_from_nodes(self.nodes)
+        
 class QueryEngineBuilder:
-    def __init__(self, summary_index: SummaryIndex, vector_index: VectorStoreIndex):
+    def __init__(self, summary_index: SummaryIndex, vector_index: VectorStoreIndex, kg_index: KnowledgeGraphIndex):
         self.summary_index = summary_index
         self.vector_index = vector_index
+        self.kg_index = kg_index
         self.query_engine = None
 
     def build_query_engine(self):
@@ -171,6 +185,14 @@ class QueryEngineBuilder:
             use_async=True,
         )
         vector_query_engine = self.vector_index.as_query_engine()
+        kg_query_engine = self.kg_index.as_query_engine(
+            include_text=True,
+            retriever_mode="keyword",
+            response_mode="tree_summarize",
+            embedding_mode="hybrid",
+            similarity_top_k=3,
+            explore_global_knowledge=True,
+        )
 
         summary_tool = QueryEngineTool.from_defaults(
             query_engine=summary_query_engine,
@@ -182,13 +204,18 @@ class QueryEngineBuilder:
             description="Useful for retrieving specific context from the Document."
         )
 
+        kg_tool = QueryEngineTool.from_defaults(
+            query_engine=kg_query_engine,
+            description="Useful for understanding relationships and connections within the Document."
+        )
+
         self.query_engine = RouterQueryEngine(
             selector=LLMSingleSelector.from_defaults(),
-            query_engine_tools=[summary_tool, vector_tool],
+            query_engine_tools=[summary_tool, vector_tool, kg_tool],
             verbose=True
         )
 
-# Modify the document_store to include the new query engine
+
 document_store = {}
 
 async def process_document(file_path: str, file_hash: str, original_filename: str):
@@ -210,7 +237,7 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
         processor = DocumentProcessor(file_path)
         processor.process()
         
-        query_engine_builder = QueryEngineBuilder(processor.summary_index, processor.vector_index)
+        query_engine_builder = QueryEngineBuilder(processor.summary_index, processor.vector_index, processor.kg_index)
         query_engine_builder.build_query_engine()
         
         doc_info = {
@@ -222,7 +249,7 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
             "last_modified": last_modified,
             "created_at": created_at,
             "page_count": page_count,
-            "author": author  # Add the author information
+            "author": author  
         }
         
         document_store[file_hash] = doc_info
@@ -277,7 +304,7 @@ async def chat(chat_request: ChatRequest):
         logger.error(f"Error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
 
-@app.get("/fileinfo/{file_id}", response_model=FileInfoResponse)
+@app.post("/fileinfo/{file_id}", response_model=FileInfoResponse)
 async def get_file_info(file_id: str):
     doc_info = get_document_info(file_id)
     if not doc_info:
