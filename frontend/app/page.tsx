@@ -55,10 +55,12 @@ export function LandingSection(){
       <GoogleGeminiEffectDemo />
       <div className="flex gap-4 mt-16 flex-col lg:items-stretch items-center lg:flex-row px-4 py-5">
         <CardGrid />
+      </div>
+      <div className="sm:px-32 px-8">
         <BigCard />
       </div>
-      <div className="py-6">
-        <p className="text-center font-mono lowercase pb-4">Made with 💖 by <span className="font-extrabold">Team Fischer - </span> <a className="underline" href="https://github.com/sr2echa">Sreecha</a> , <a className="underline" href="https://github.com/wreckage0907">Girish</a> , <a className="underline" href="https://github.com/TobyVincentJohn">Toby</a> & <a className="underline" href="https://github.com/Akkilesh-A">Akkilesh</a></p>
+      <div className="pt-6 pb-4">
+        <p className="text-center font-mono lowercase pb-4">Made with 💖 by <span className="font-extrabold">Team Fischer <span className="sm:block hidden">-</span> </span> <span className="block sm:hidden"><br /></span> <a className="underline" href="https://github.com/sr2echa">Sreecha</a> , <a className="underline" href="https://github.com/wreckage0907">Girish</a> , <a className="underline" href="https://github.com/TobyVincentJohn">Toby</a> & <a className="underline" href="https://github.com/Akkilesh-A">Akkilesh</a></p>
       </div>
     </div>
   )
@@ -66,7 +68,7 @@ export function LandingSection(){
 
 export function BigCard(){
   return(
-    <div className="flex m-2 dark:bg-[#0a0a0a] w-full bg-white justify-center items-center flex-col gap-8 border-2 rounded-xl px-8 py-16">
+    <div className="flex dark:bg-[#0a0a0a] w-full bg-white justify-center items-center flex-col gap-8 border-2 rounded-xl sm:px-48 sm:py-72 px-16 py-28">
 
       <div className="flex flex-col gap-4">
         <div className="text-5xl font-extrabold text-center">
