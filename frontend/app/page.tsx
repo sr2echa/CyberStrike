@@ -12,6 +12,7 @@ import { Shield, Zap, Lock, Cpu, ArrowRight, } from "lucide-react";
 import Image from "next/image";
 import { motion, useScroll, useTransform} from "framer-motion"
 import { FlipWordsDemo } from "@/components/ui/google-gemini-effect";
+import { useTheme } from "next-themes";
 
 export default function Page(){
   return(
@@ -22,21 +23,29 @@ export default function Page(){
 }
 
 export function LandingSection(){
+
+  const {theme,setTheme} = useTheme();
   return(
     <div>
       {/* <ModeToggle /> */}
-      <div className="sm:hidden h-screen flex flex-col justify-center items-center">
-     
-      <div className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</div>
-        <FlipWordsDemo />        
-        <Link className="flex justify-center mt-8 sm:mt-16" href={"/upload"}>
-          <RainbowButton>Start your Analysis!</RainbowButton>
-        </Link>
-        <div className="mt-32 flex justify-center">
-          <Image className="animate-bounce" src="/chevron-force-down.svg" alt="down_arrow" width={50} height={50} />
-        </div>      
-      </div>
-      <div className="flex w-full justify-center pt-16 my-16">
+      <div className="sm:hidden h-screen flex flex-col  items-center">
+        <div className="flex sm:hidden w-full justify-center mb-8 mt-28">
+          <Image className="hidden dark:block" src="/whiteFischerLogo.png" alt="Fischer Logo light" width={60} height={40}/>
+          <Image className="dark:hidden" src="/blackFischerLogo.png" alt="Fischer Logo dark" width={60} height={40}/>  
+        </div>
+
+        <div className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</div>
+          <FlipWordsDemo />        
+          <Link className="flex justify-center mt-8 sm:mt-16" href={"/upload"}>
+            <RainbowButton >Start your Analysis!</RainbowButton>
+          </Link>
+          <div className="mt-32 flex justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="animate-bounce dark:fill-white" width="24" height="24" viewBox="0 0 24 24" id="chevron-force-down">
+              <path d="M6.25753788,13.2424621 C5.84748737,12.8324116 5.84748737,12.1675884 6.25753788,11.7575379 C6.66758839,11.3474874 7.33241161,11.3474874 7.74246212,11.7575379 L12,16.0150758 L16.2575379,11.7575379 C16.6675884,11.3474874 17.3324116,11.3474874 17.7424621,11.7575379 C18.1525126,12.1675884 18.1525126,12.8324116 17.7424621,13.2424621 L12.7424621,18.2424621 C12.3324116,18.6525126 11.6675884,18.6525126 11.2575379,18.2424621 L6.25753788,13.2424621 Z M6.25753788,7.24246212 C5.84748737,6.83241161 5.84748737,6.16758839 6.25753788,5.75753788 C6.66758839,5.34748737 7.33241161,5.34748737 7.74246212,5.75753788 L12,10.0150758 L16.2575379,5.75753788 C16.6675884,5.34748737 17.3324116,5.34748737 17.7424621,5.75753788 C18.1525126,6.16758839 18.1525126,6.83241161 17.7424621,7.24246212 L12.7424621,12.2424621 C12.3324116,12.6525126 11.6675884,12.6525126 11.2575379,12.2424621 L6.25753788,7.24246212 Z"></path>
+            </svg>  
+          </div>      
+        </div>
+      <div className="hidden sm:flex w-full justify-center pt-16 my-16">
         <Image className="hidden dark:block" src="/whiteFischerLogo.png" alt="Fischer Logo light" width={60} height={40}/>
         <Image className="dark:hidden" src="/blackFischerLogo.png" alt="Fischer Logo dark" width={60} height={40}/>  
       </div>
