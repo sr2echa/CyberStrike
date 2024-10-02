@@ -185,7 +185,7 @@ export default function Analyze() {
   }, [chatMessages]);
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col lg:flex-row">
+    <div className="min-h-screen dark:bg-[] bg-white text-black flex flex-col lg:flex-row">
       {/* Chatbot Section */}
       <div className="lg:w-1/2 p-4 flex flex-col h-screen">
         <h2 className="text-2xl font-bold mb-4 flex items-center">

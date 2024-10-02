@@ -164,7 +164,7 @@ export const GoogleGeminiEffect = ({
 };
 
 export function FlipWordsDemo() {
-  const words = ["Organisations", "Enterprises", "Individuals", "modern"];
+  const words = ["Organisations", "Enterprises", "Individuals"];
  
   return (
     <div className="text-center font-semibold flex justify-center items-center px-4">

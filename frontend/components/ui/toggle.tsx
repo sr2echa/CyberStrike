@@ -17,7 +17,7 @@ export function ModeToggle() {
 
   return (
     <DropdownMenu>
-        <Button onClick={()=>{
+        <Button className="z-50" onClick={()=>{
         if(theme == "light") {
           setTheme("dark")
         } else {

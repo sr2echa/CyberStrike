@@ -26,7 +26,8 @@ export function LandingSection(){
     <div>
       {/* <ModeToggle /> */}
       <div className="sm:hidden h-screen flex flex-col justify-center items-center">
-        <motion.div className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</motion.div>
+     
+      <div className="mb-4 text-5xl sm:text-8xl font-semibold text-center">CyberStrike</div>
         <FlipWordsDemo />        
         <Link className="flex justify-center mt-8 sm:mt-16" href={"/upload2"}>
           <RainbowButton>Start your Analysis!</RainbowButton>
@@ -35,11 +36,14 @@ export function LandingSection(){
           <Image className="animate-bounce" src="/chevron-force-down.svg" alt="down_arrow" width={50} height={50} />
         </div>      
       </div>
-
+      <div className="flex w-full justify-center pt-16">
+        <Image className="hidden dark:block" src="/whiteFischerLogo.png" alt="Fischer Logo light" width={100} height={40}/>
+        <Image className="dark:hidden" src="/blackFischerLogo.png" alt="Fischer Logo dark" width={100} height={40}/>  
+      </div>
       <div className="sm:block hidden">
         <MacbookScrollDemo />
       </div>
-      <div className="flex gap-4 mt-16 flex-col lg:flex-row px-4 py-5">
+      <div className="flex gap-4 mt-16 flex-col lg:items-stretch items-center lg:flex-row px-4 py-5">
         <CardGrid />
         <BigCard />
       </div>

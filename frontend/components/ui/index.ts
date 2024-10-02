@@ -42,5 +42,5 @@ export {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-    ModeToggle
+    ModeToggle,
 }
