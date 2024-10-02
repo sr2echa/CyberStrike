@@ -25,7 +25,7 @@ export const GoogleGeminiEffect = ({
   return (
     <div className={cn("sticky top-80", className)}>
       <p className="text-5xl md:text-7xl dark:text-white font-bold text-black pb-4 text-center">
-       Team Fischer
+      CyberStrike
       </p>
       <div className="text-centera mx-w-lg mx-auto">
         <FlipWordsDemo />

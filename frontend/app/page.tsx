@@ -46,17 +46,17 @@ export function LandingSection(){
           </div>      
         </div>
       <div className="hidden sm:flex w-full justify-center pt-16 my-16">
-        <Image className="hidden dark:block" src="/whiteFischerLogo.png" alt="Fischer Logo light" width={60} height={40}/>
-        <Image className="dark:hidden" src="/blackFischerLogo.png" alt="Fischer Logo dark" width={60} height={40}/>  
+        <Image className="hidden dark:block" src="/whiteFischerLogo.png" alt="Fischer Logo light" width={100} height={40}/>
+        <Image className="dark:hidden" src="/blackFischerLogo.png" alt="Fischer Logo dark" width={100} height={40}/>  
       </div>
-      <div className="sm:block hidden">
+      {/* <div className="sm:block hidden">
         <MacbookScrollDemo />
-      </div>
+      </div> */}
+      <GoogleGeminiEffectDemo />
       <div className="flex gap-4 mt-16 flex-col lg:items-stretch items-center lg:flex-row px-4 py-5">
         <CardGrid />
         <BigCard />
       </div>
-      <GoogleGeminiEffectDemo />
       <div>
         <p className="text-center font-mono lowercase pb-4">Made with 💖 by <span className="font-extrabold">Team Fischer - </span> <a className="underline" href="https://github.com/sr2echa">Sreecha</a> , <a className="underline" href="https://github.com/wreckage0907">Girish</a> , <a className="underline" href="https://github.com/TobyVincentJohn">Toby</a> & <a className="underline" href="https://github.com/Akkilesh-A">Akkilesh</a></p>
       </div>
