@@ -16,6 +16,7 @@ import {
   Clock,
   Loader,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import ReactMarkdown from "react-markdown";
 import Image from "next/image";
+
+// Add these type definitions at the top of the file
+type Vulnerability = {
+  description: string;
+  criticality: number;
+  reasoning: string;
+  mitigation: string;
+};
+
+type KeyFindings = {
+  [category: string]: {
+    [subCategory: string]: {
+      [key: string]: string | string[];
+    };
+  };
+};
+
+type FileInfo = {
+  file_name: string;
+  file_size: string;
+  last_edited: string;
+  page_count: number;
+  author: string;
+  created_at: string;
+};
+
+// At the top of your file, add this interface
+interface ChatMessage {
+  role: string;
+  content: string;
+}
 
 // Mock data
 const fileAnalytics = {
@@ -41,17 +73,19 @@ export default function Analyze() {
   const url = usePathname();
   const id = url.split("/").pop();
 
-  const [chatMessages, setChatMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("summary");
-  const chatEndRef = useRef(null);
-  const [vulnerabilities, setVulnerabilities] = useState([]);
-  const [keyFindings, setKeyFindings] = useState(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [vulnerabilities, setVulnerabilities] = useState<Vulnerability[]>([]);
+  const [keyFindings, setKeyFindings] = useState<KeyFindings | null>(null);
   const [isLoadingVulnerabilities, setIsLoadingVulnerabilities] = useState(false);
   const [isLoadingKeyFindings, setIsLoadingKeyFindings] = useState(false);
   const [summary, setSummary] = useState("");
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [isLoadingFileInfo, setIsLoadingFileInfo] = useState(true);
 
   useEffect(() => {
     const fetchVulnerabilities = async () => {
@@ -71,7 +105,7 @@ export default function Analyze() {
 
         const data = await response.json();
         console.log("Vulnerabilities data:", data);
-        setVulnerabilities(data.vulnerabilities);
+        setVulnerabilities(data.vulnerabilities as Vulnerability[]);
       } catch (error) {
         console.error("Error fetching vulnerabilities:", error);
       } finally {
@@ -96,7 +130,7 @@ export default function Analyze() {
 
         const data = await response.json();
         console.log("Key findings data:", data);
-        setKeyFindings(data.findings);
+        setKeyFindings(data.findings as KeyFindings);
       } catch (error) {
         console.error("Error fetching key findings:", error);
       } finally {
@@ -129,10 +163,31 @@ export default function Analyze() {
       }
     };
 
+    const fetchFileInfo = async () => {
+      setIsLoadingFileInfo(true);
+      try {
+        const response = await fetch(`${backendUrl}/fileinfo/${id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id }),
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("File info data:", data);
+        setFileInfo(data as FileInfo);
+      } catch (error) {
+        console.error("Error fetching file info:", error);
+      } finally {
+        setIsLoadingFileInfo(false);
+      }
+    };
+
     if (id) {
-      fetchVulnerabilities();
-      fetchKeyFindings();
-      fetchSummary();
+      Promise.all([fetchFileInfo(), fetchVulnerabilities(), fetchKeyFindings(), fetchSummary()]);
     }
 
     // Load chat messages from localStorage
@@ -206,6 +261,26 @@ export default function Analyze() {
     }
   };
 
+  const SummaryRenderer = () => (
+    <ReactMarkdown
+      components={{
+        h2: ({ children }) => <h2 className="text-2xl font-bold mt-6 mb-4">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-xl font-semibold mt-4 mb-2">{children}</h3>,
+        p: ({ children }) => <p className="mb-4">{children}</p>,
+        ul: ({ children }) => <ul className="list-disc pl-6 mb-4">{children}</ul>,
+        li: ({ children }) => <li className="mb-2">{children}</li>,
+        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        code: ({ children }) => (
+          <code className="bg-gray-200 dark:bg-gray-700/80 px-2 py-1 text-sm rounded font-mono">
+            {children}
+          </code>
+        ),
+      }}
+    >
+      {summary}
+    </ReactMarkdown>
+  );
+
   return (
     <div className="flex h-[calc(100vh-72px)]">
       {/* Chatbot Section */}
@@ -251,7 +326,7 @@ export default function Analyze() {
               >
                 <ReactMarkdown
                   components={{
-                    code({ node, inline, className, children, ...props }) {
+                    code({ node, className, children, ...props }) {
                       return (
                         <code className="bg-gray-300 dark:bg-gray-600 px-1 rounded" {...props}>
                           {children}
@@ -305,29 +380,39 @@ export default function Analyze() {
             <CardTitle>File Analytics</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-center mb-4">
-              <File className="w-24 h-24 text-gray-600 dark:text-gray-400" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FileInfoItem icon={<FileText />} label="File Name" value={fileAnalytics.fileName} />
-              <FileInfoItem icon={<Search />} label="File Size" value={fileAnalytics.fileSize} />
-              <FileInfoItem
-                icon={<AlertTriangle />}
-                label="Last Edited"
-                value={fileAnalytics.lastEdited}
-              />
-              <FileInfoItem
-                icon={<FileText />}
-                label="Page Count"
-                value={fileAnalytics.pageCount.toString()}
-              />
-              <FileInfoItem icon={<Cpu />} label="Author" value={fileAnalytics.author} />
-              <FileInfoItem
-                icon={<Calendar />}
-                label="Created At"
-                value={fileAnalytics.createdAt}
-              />
-            </div>
+            {isLoadingFileInfo ? (
+              <div className="flex justify-center items-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : fileInfo ? (
+              <>
+                <div className="flex justify-center mb-4">
+                  <File className="w-24 h-24 text-gray-600 dark:text-gray-400" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FileInfoItem icon={<FileText />} label="File Name" value={fileInfo.file_name} />
+                  <FileInfoItem icon={<Search />} label="File Size" value={fileInfo.file_size} />
+                  <FileInfoItem
+                    icon={<AlertTriangle />}
+                    label="Last Edited"
+                    value={fileInfo.last_edited}
+                  />
+                  <FileInfoItem
+                    icon={<FileText />}
+                    label="Page Count"
+                    value={fileInfo.page_count.toString()}
+                  />
+                  <FileInfoItem icon={<Cpu />} label="Author" value={fileInfo.author} />
+                  <FileInfoItem
+                    icon={<Calendar />}
+                    label="Created At"
+                    value={fileInfo.created_at}
+                  />
+                </div>
+              </>
+            ) : (
+              <p>No file information available.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -357,19 +442,11 @@ export default function Analyze() {
             <CardContent>
               {isLoadingSummary ? (
                 <div className="flex justify-center items-center h-40">
-                  <Loader className="h-8 w-8 animate-spin" />
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : summary ? (
-                <div className="prose dark:prose-invert">
-                  <ReactMarkdown
-                    components={{
-                      p: ({ children }) => (
-                        <p className="text-gray-700 dark:text-gray-300">{children}</p>
-                      ),
-                    }}
-                  >
-                    {summary}
-                  </ReactMarkdown>
+                <div className="prose dark:prose-invert max-w-none">
+                  <SummaryRenderer />
                 </div>
               ) : (
                 <p>No summary available.</p>
@@ -389,7 +466,7 @@ export default function Analyze() {
             <CardContent>
               {isLoadingKeyFindings ? (
                 <div className="flex justify-center items-center h-40">
-                  <Loader className="h-8 w-8 animate-spin" />
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : keyFindings ? (
                 Object.entries(keyFindings).map(([category, data], index) => (
@@ -438,7 +515,7 @@ export default function Analyze() {
             <CardContent>
               {isLoadingVulnerabilities ? (
                 <div className="flex justify-center items-center h-40">
-                  <Loader className="h-8 w-8 animate-spin" />
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : vulnerabilities.length > 0 ? (
                 vulnerabilities.map((vuln, index) => (
@@ -451,7 +528,7 @@ export default function Analyze() {
                       <h3 className="text-xl font-semibold flex-grow font">
                         <ReactMarkdown
                           components={{
-                            code({ node, inline, className, children, ...props }) {
+                            code({ node, className, children, ...props }) {
                               return (
                                 <code
                                   className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
@@ -472,7 +549,7 @@ export default function Analyze() {
                       <Progress
                         value={vuln.criticality * 10}
                         className="w-24 ml-2"
-                        indicatorClassName={getCriticalityColor(vuln.criticality)}
+                        // indicatorClassName={getCriticalityColor(vuln.criticality)}
                       />
                     </div>
                     <p className="mb-2">
@@ -482,7 +559,7 @@ export default function Analyze() {
                           p: ({ children }) => (
                             <p className="text-gray-700 dark:text-gray-300">{children}</p>
                           ),
-                          code({ node, inline, className, children, ...props }) {
+                          code({ node, className, children, ...props }) {
                             return (
                               <code
                                 className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
@@ -504,7 +581,7 @@ export default function Analyze() {
                           p: ({ children }) => (
                             <p className="text-gray-700 dark:text-gray-300">{children}</p>
                           ),
-                          code({ node, inline, className, children, ...props }) {
+                          code({ node, className, children, ...props }) {
                             return (
                               <code
                                 className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
