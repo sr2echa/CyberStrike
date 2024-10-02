@@ -185,26 +185,28 @@ export default function Analyze() {
   }, [chatMessages]);
 
   return (
-    <div className=" dark:bg-[#a0a0a0] bg-white text-black flex flex-col lg:flex-row">
+    <div className="flex h-[calc(100vh-72px)]">
       {/* Chatbot Section */}
-      <div className="lg:w-1/2 p-4 flex flex-col h-screen">
-        {/* <h2 className="text-2xl font-bold mb-4 flex items-center">
-          <Cpu className="mr-2 h-6 w-6" />
-          CyberStrike AI Assistant
-        </h2> */}
-        <div className="flex-grow overflow-y-auto mb-4 p-4 bg-gray-100 rounded-lg">
+      <div className="w-1/2 p-4 flex flex-col overflow-hidden ml-3">
+        <div className="flex-grow overflow-y-auto mb-6 px-6 py-4 bg-gray-100 dark:bg-zinc-400/5 rounded-lg">
           {chatMessages.map((msg, index) => (
-            <div key={index} className={`mb-2 ${msg.role === "user" ? "text-right" : "text-left"}`}>
+            <div
+              key={index}
+              className={`mb-2 ${msg.role === "user" ? "text-right mt-10" : "text-left"}`}
+            >
               <span
-                className={`inline-block p-2 rounded-lg ${
-                  msg.role === "user" ? "bg-black text-white" : "bg-gray-200"
+                className={`inline-block px-4 py-2 rounded-lg ${
+                  msg.role === "user"
+                    ? "bg-black text-white dark:bg-white dark:text-gray-900"
+                    : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
                 }`}
+                style={{ marginBottom: `${(chatMessages.length - index) * 4}px` }}
               >
                 <ReactMarkdown
                   components={{
                     code({ node, inline, className, children, ...props }) {
                       return (
-                        <code className="bg-gray-300 px-1 rounded" {...props}>
+                        <code className="bg-gray-300 dark:bg-gray-600 px-1 rounded" {...props}>
                           {children}
                         </code>
                       );
@@ -217,44 +219,44 @@ export default function Analyze() {
             </div>
           ))}
           {isLoading && (
-            <div className="flex items-center space-x-2 text-gray-500">
-              <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce"></div>
+            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+              <div className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"></div>
               <div
-                className="w-2 h-2 rounded-full bg-gray-500 animate-bounce"
+                className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
                 style={{ animationDelay: "0.2s" }}
               ></div>
               <div
-                className="w-2 h-2 rounded-full bg-gray-500 animate-bounce"
+                className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
                 style={{ animationDelay: "0.4s" }}
               ></div>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
-        <div className="flex">
+        <div className="flex mb-2">
           <Input
             type="text"
             placeholder="Ask about the security audit..."
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="flex-grow mr-2"
+            className="flex-grow mr-3 h-11"
           />
-          <Button onClick={handleSendMessage} disabled={isLoading}>
-            <Send className="h-4 w-4" />
+          <Button onClick={handleSendMessage} disabled={isLoading} className="h-11">
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
       {/* Analysis Section */}
-      <div className="lg:w-1/2 p-4 overflow-y-auto h-screen">
+      <div className="w-1/2 p-4 overflow-y-auto">
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>File Analytics</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-center mb-4">
-              <File className="w-24 h-24 text-gray-600" />
+              <File className="w-24 h-24 text-gray-600 dark:text-gray-400" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FileInfoItem icon={<FileText />} label="File Name" value={fileAnalytics.fileName} />
@@ -295,7 +297,7 @@ export default function Analyze() {
         </div>
 
         {activeTab === "summary" && (
-          <Card>
+          <Card className="mb-4">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Zap className="mr-2 h-6 w-6" />
@@ -309,7 +311,15 @@ export default function Analyze() {
                 </div>
               ) : summary ? (
                 <div className="prose dark:prose-invert">
-                  <ReactMarkdown>{summary}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => (
+                        <p className="text-gray-700 dark:text-gray-300">{children}</p>
+                      ),
+                    }}
+                  >
+                    {summary}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 <p>No summary available.</p>
@@ -319,7 +329,7 @@ export default function Analyze() {
         )}
 
         {activeTab === "findings" && (
-          <Card>
+          <Card className="mb-4">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Shield className="mr-2 h-6 w-6" />
@@ -344,11 +354,15 @@ export default function Analyze() {
                             {Array.isArray(value) ? (
                               <ul className="list-disc list-inside ml-2">
                                 {value.map((item, j) => (
-                                  <li key={j}>{item}</li>
+                                  <li key={j} className="text-gray-700 dark:text-gray-300">
+                                    {item}
+                                  </li>
                                 ))}
                               </ul>
                             ) : (
-                              <span className="ml-2">{String(value)}</span>
+                              <span className="ml-2 text-gray-700 dark:text-gray-300">
+                                {String(value)}
+                              </span>
                             )}
                           </div>
                         ))}
@@ -364,7 +378,7 @@ export default function Analyze() {
         )}
 
         {activeTab === "vulnerabilities" && (
-          <Card>
+          <Card className="mb-4">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Lock className="mr-2 h-6 w-6" />
@@ -378,7 +392,10 @@ export default function Analyze() {
                 </div>
               ) : vulnerabilities.length > 0 ? (
                 vulnerabilities.map((vuln, index) => (
-                  <div key={index} className="mb-6 p-4 border border-gray-200 rounded-lg">
+                  <div
+                    key={index}
+                    className="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+                  >
                     <div className="flex items-stretch mb-5">
                       <div className={`w-2 mr-4 ${getCriticalityColor(vuln.criticality)}`}></div>
                       <h3 className="text-xl font-semibold flex-grow font">
@@ -386,7 +403,10 @@ export default function Analyze() {
                           components={{
                             code({ node, inline, className, children, ...props }) {
                               return (
-                                <code className="bg-gray-200 px-1 rounded" {...props}>
+                                <code
+                                  className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
+                                  {...props}
+                                >
                                   {children}
                                 </code>
                               );
@@ -409,9 +429,15 @@ export default function Analyze() {
                       <strong>Reasoning:</strong>
                       <ReactMarkdown
                         components={{
+                          p: ({ children }) => (
+                            <p className="text-gray-700 dark:text-gray-300">{children}</p>
+                          ),
                           code({ node, inline, className, children, ...props }) {
                             return (
-                              <code className="bg-gray-200 px-1 rounded" {...props}>
+                              <code
+                                className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
+                                {...props}
+                              >
                                 {children}
                               </code>
                             );
@@ -425,9 +451,15 @@ export default function Analyze() {
                       <strong>Mitigation:</strong>
                       <ReactMarkdown
                         components={{
+                          p: ({ children }) => (
+                            <p className="text-gray-700 dark:text-gray-300">{children}</p>
+                          ),
                           code({ node, inline, className, children, ...props }) {
                             return (
-                              <code className="bg-gray-200 px-1 rounded" {...props}>
+                              <code
+                                className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
+                                {...props}
+                              >
                                 {children}
                               </code>
                             );
@@ -469,7 +501,7 @@ function FileInfoItem({
     <div className="flex items-center">
       {icon}
       <div className="ml-2">
-        <div className="text-sm text-gray-500">{label}</div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
         <div className="font-medium">{value}</div>
       </div>
     </div>
@@ -488,7 +520,9 @@ function TabButton({
   return (
     <button
       className={`px-4 py-2 rounded-lg transition-colors ${
-        active ? "bg-black text-white" : "bg-gray-200 text-black hover:bg-gray-300"
+        active
+          ? "bg-black text-white dark:bg-white dark:text-black"
+          : "bg-gray-200 text-black hover:bg-gray-300 dark:bg-gray-700/50 dark:text-white dark:hover:bg-gray-600/50"
       }`}
       onClick={onClick}
     >
