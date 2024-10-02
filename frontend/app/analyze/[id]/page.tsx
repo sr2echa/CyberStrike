@@ -67,7 +67,7 @@ const fileAnalytics = {
 };
 
 export default function Analyze() {
-  const backendUrl = "https://d638-2406-7400-c8-df4b-636e-473-68ea-5287.ngrok-free.app";
+  const backendUrl = process.env.BACKEND_URL;
 
   //get the url
   const url = usePathname();

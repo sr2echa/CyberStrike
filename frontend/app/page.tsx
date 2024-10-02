@@ -68,7 +68,7 @@ export function LandingSection(){
 
 export function BigCard(){
   return(
-    <div className="flex dark:bg-[#0a0a0a] w-full bg-white justify-center items-center flex-col gap-8 border-2 rounded-xl sm:px-48 sm:py-72 px-16 py-28">
+    <div className="flex dark:bg-[#0a0a0a] w-full bg-white justify-center items-center flex-col gap-8 border-2 rounded-xl sm:px-48 sm:py-72 px-16 py-24">
 
       <div className="flex flex-col gap-4">
         <div className="text-5xl font-extrabold text-center">

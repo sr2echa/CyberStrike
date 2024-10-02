@@ -6,7 +6,7 @@ import { Upload, File, Loader, Clock, GripVertical, Trash2 } from "lucide-react"
 import { Button, RainbowButton, FileUpload } from "@/components/ui";
 
 export default function Page() {
-  const backendUrl = "https://d638-2406-7400-c8-df4b-636e-473-68ea-5287.ngrok-free.app";
+  const backendUrl = process.env.BACKEND_URL;
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
