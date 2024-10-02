@@ -15,6 +15,7 @@ import {
   Calendar,
   Clock,
   Loader,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ const fileAnalytics = {
 };
 
 export default function Analyze() {
-  const backendUrl = "https://24c3-2406-7400-c8-df4b-636e-473-68ea-5287.ngrok-free.app";
+  const backendUrl = "https://d638-2406-7400-c8-df4b-636e-473-68ea-5287.ngrok-free.app";
 
   //get the url
   const url = usePathname();
@@ -133,12 +134,26 @@ export default function Analyze() {
       fetchKeyFindings();
       fetchSummary();
     }
+
+    // Load chat messages from localStorage
+    const storedMessages = localStorage.getItem(`chatMessages_${id}`);
+    if (storedMessages) {
+      setChatMessages(JSON.parse(storedMessages));
+    }
   }, [id, backendUrl]);
+
+  useEffect(() => {
+    // Save chat messages to localStorage whenever they change
+    if (id && chatMessages.length > 0) {
+      localStorage.setItem(`chatMessages_${id}`, JSON.stringify(chatMessages));
+    }
+  }, [chatMessages, id]);
 
   const handleSendMessage = async () => {
     if (inputMessage.trim()) {
       const newUserMessage = { role: "user", content: inputMessage };
-      setChatMessages([...chatMessages, newUserMessage]);
+      const updatedMessages = [...chatMessages, newUserMessage];
+      setChatMessages(updatedMessages);
       setInputMessage("");
       setIsLoading(true);
 
@@ -151,7 +166,7 @@ export default function Analyze() {
           body: JSON.stringify({
             id: id,
             query: inputMessage,
-            history: chatMessages,
+            history: updatedMessages,
           }),
         });
 
@@ -160,14 +175,13 @@ export default function Analyze() {
         }
 
         const data = await response.json();
-        const newBotMessage = { role: "bot", content: data.response };
+        const newBotMessage = { role: "assistant", content: data.response };
         setChatMessages((prevMessages) => [...prevMessages, newBotMessage]);
       } catch (error) {
         console.error("Error sending chat message:", error);
-        // Optionally, you can add an error message to the chat
         setChatMessages((prevMessages) => [
           ...prevMessages,
-          { role: "bot", content: "Sorry, there was an error processing your request." },
+          { role: "assistant", content: "Sorry, there was an error processing your request." },
         ]);
       } finally {
         setIsLoading(false);
@@ -184,6 +198,13 @@ export default function Analyze() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  const handleClearChat = () => {
+    setChatMessages([]);
+    if (id) {
+      localStorage.removeItem(`chatMessages_${id}`);
+    }
+  };
 
   return (
     <div className="flex h-[calc(100vh-72px)]">
@@ -268,8 +289,11 @@ export default function Analyze() {
             onKeyPress={handleKeyPress}
             className="flex-grow mr-3 h-11"
           />
-          <Button onClick={handleSendMessage} disabled={isLoading} className="h-11">
+          <Button onClick={handleSendMessage} disabled={isLoading} className="h-11 mr-2">
             <Send className="h-5 w-5" />
+          </Button>
+          <Button onClick={handleClearChat} variant="outline" className="h-11">
+            <Trash2 className="h-5 w-5" />
           </Button>
         </div>
       </div>
