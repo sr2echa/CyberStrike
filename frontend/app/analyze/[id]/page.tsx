@@ -33,7 +33,7 @@ const fileAnalytics = {
 };
 
 export default function Analyze() {
-  const backendUrl = "https://a44a-2406-7400-c8-676b-428c-454c-386e-3fb9.ngrok-free.app";
+  const backendUrl = "https://24c3-2406-7400-c8-df4b-636e-473-68ea-5287.ngrok-free.app";
 
   //get the url
   const url = usePathname();
@@ -185,13 +185,13 @@ export default function Analyze() {
   }, [chatMessages]);
 
   return (
-    <div className="min-h-screen dark:bg-[] bg-white text-black flex flex-col lg:flex-row">
+    <div className=" dark:bg-[#a0a0a0] bg-white text-black flex flex-col lg:flex-row">
       {/* Chatbot Section */}
       <div className="lg:w-1/2 p-4 flex flex-col h-screen">
-        <h2 className="text-2xl font-bold mb-4 flex items-center">
+        {/* <h2 className="text-2xl font-bold mb-4 flex items-center">
           <Cpu className="mr-2 h-6 w-6" />
           CyberStrike AI Assistant
-        </h2>
+        </h2> */}
         <div className="flex-grow overflow-y-auto mb-4 p-4 bg-gray-100 rounded-lg">
           {chatMessages.map((msg, index) => (
             <div key={index} className={`mb-2 ${msg.role === "user" ? "text-right" : "text-left"}`}>
