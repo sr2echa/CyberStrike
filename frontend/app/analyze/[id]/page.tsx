@@ -67,7 +67,7 @@ const fileAnalytics = {
 };
 
 export default function Analyze() {
-  const backendUrl = process.env.BACKEND_URL;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   //get the url
   const url = usePathname();
