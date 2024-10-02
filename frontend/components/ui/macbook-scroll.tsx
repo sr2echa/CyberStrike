@@ -61,7 +61,7 @@ export const MacbookScroll = ({
     [0, 0.3],
     [0.6, isMobile ? 1 : 1.5]
   );
-  const translate = useTransform(scrollYProgress, [0, 1], [0, 600]);
+  const translate = useTransform(scrollYProgress, [0, 1], [0, 1500]);
   const rotate = useTransform(scrollYProgress, [0.1, 0.12, 0.3], [-28, -28, 0]);
   const textTransform = useTransform(scrollYProgress, [0, 0.3], [0, 100]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -69,7 +69,7 @@ export const MacbookScroll = ({
   return (
     <div
       ref={ref}
-      className="min-h-[250vh]  flex flex-col items-center py-0 md:py-56 justify-start flex-shrink-0 [perspective:800px] transform md:scale-100  scale-[0.35] sm:scale-50"
+      className="min-h-[200vh] flex flex-col items-center py-0 md:pt-30 md:pb-56 justify-start flex-shrink-0 [perspective:800px] transform md:scale-100  scale-[0.35] sm:scale-50"
     >
       <motion.h2
         style={{
@@ -78,12 +78,12 @@ export const MacbookScroll = ({
         }}
         className="dark:text-white text-neutral-800 text-3xl font-bold mb-20 text-center"
       >
-        <p className="text-5xl md:text-7xl dark:text-white font-bold text-black pb-4 text-center">
-          {`CyberStrike`}
-        </p>
-        <div className="text-centera mx-w-lg mx-auto">
+         <p className="text-5xl md:text-7xl dark:text-white font-bold text-black pb-4 text-center">
+           {`CyberStrike`}
+         </p>
+         <div className="text-centera mx-w-lg mx-auto">
           <FlipWordsDemo />
-        </div>
+         </div>
       </motion.h2>
       {/* Lid */}
       <Lid

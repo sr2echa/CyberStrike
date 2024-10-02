@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ModeToggle, ThemeProvider } from "@/components/ui"
+import Image from "next/image";
+import Link from "next/link";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -35,8 +39,20 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="absolute top-2 left-2">
-              <ModeToggle />
+            <div className=" sticky top-0 rounded">
+              <div className="dark:bg-[#0a0a0a]/50 border flex w-full items-center justify-between backdrop-blur-sm bg-white/50 z-[1000] px-16 py-4">
+                <Link href="/">
+                  <Image className="hidden dark:block" src="/whiteFischerLogo.png" alt="Fischer Logo light" width={25} height={40}/>
+                  <Image className="dark:hidden" src="/blackFischerLogo.png" alt="Fischer Logo dark" width={25} height={40}/>  
+                </Link>
+                <div className="flex gap-4 items-center">
+                  <div className="p-2 rounded-md border ">
+                    <GitHubLogoIcon  width={20} height={20}/>
+                  </div>
+                  <div className="dark:text-[#262626] text-[#e5e5e5]">{"|"}</div>
+                  <ModeToggle />
+                </div>
+              </div>
             </div>
           {children}
           </ThemeProvider>

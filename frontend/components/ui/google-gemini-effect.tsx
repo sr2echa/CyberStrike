@@ -31,7 +31,7 @@ export const GoogleGeminiEffect = ({
         <FlipWordsDemo />
       </div>
       <div className="w-full h-[890px] -top-60 md:-top-40  flex items-center justify-center bg-red-transparent absolute ">
-        <Link href={"/upload2"} className="font-bold rounded-full  md:py-2 px-2 py-1 md:mt-32 mt-8 z-30 md:text-base text-black text-xs  w-fit mx-auto ">
+        <Link href={"/upload"} className="font-bold rounded-full  md:py-2 px-2 py-1 md:mt-32 mt-8 z-30 md:text-base text-black text-xs  w-fit mx-auto ">
           <RainbowButton>
             Start Analysis
           </RainbowButton>

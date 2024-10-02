@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, File, Loader } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, RainbowButton, FileUpload } from "@/components/ui";
 
 export default function Page() {
   const backendUrl = "https://a44a-2406-7400-c8-676b-428c-454c-386e-3fb9.ngrok-free.app";
@@ -11,6 +11,11 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const router = useRouter();
+  const [files, setFiles] = useState<File[]>([]);
+  const handleFileUpload = (files: File[]) => {
+    setFile(files[0]);
+    console.log(files);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && !isLoading) {
@@ -92,55 +97,18 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col items-center justify-center p-4">
-      <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">
-        Upload Security Audit File
+    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-black flex flex-col items-center justify-center p-4">
+      <h1 className="text-4xl dark:text-white md:text-5xl font-bold mb-8 text-center">
+        {/* Upload Security Audit File */}
       </h1>
       <div className="w-full max-w-md">
-        <label
-          htmlFor="file-upload"
-          className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-            isLoading
-              ? "border-gray-400 bg-gray-100 cursor-not-allowed"
-              : isDragging
-              ? "border-gray-600 bg-gray-100"
-              : "border-gray-300 bg-white hover:bg-gray-50"
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            {file ? (
-              <>
-                <File className="w-16 h-16 mb-3 text-gray-600" />
-                <p className="mb-2 text-sm text-gray-500">
-                  <span className="font-semibold">{file.name}</span>
-                </p>
-              </>
-            ) : (
-              <>
-                <Upload className="w-16 h-16 mb-3 text-gray-600" />
-                <p className="mb-2 text-sm text-gray-500">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-gray-500">PDF (MAX. 10MB)</p>
-              </>
-            )}
-          </div>
-          <input
-            id="file-upload"
-            type="file"
-            className="hidden"
-            onChange={handleFileChange}
-            accept=".pdf"
-            disabled={isLoading}
-          />
-        </label>
-        <Button
-          className={`w-full mt-4 transition-colors ${
+        <div className="w-full max-w-4xl mx-auto min-h-96 border-dashed border-4 bg-white dark:bg-[#0a0a0a] border-neutral-200 dark:border-neutral-800 rounded-lg">
+          <FileUpload onChange={handleFileUpload} />
+        </div>
+        <RainbowButton
+          className={`w-full mt-8 transition-colors p-4 rounded-xl flex items-center justify-center ${
             isLoading || !file
-              ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+              ? "border text-gray-600 cursor-not-allowed"
               : "bg-black text-white hover:bg-gray-800"
           }`}
           onClick={handleUpload}
@@ -149,14 +117,14 @@ export default function Page() {
           {isLoading ? (
             <>
               <Loader className="w-4 h-4 mr-2 animate-spin" />
-              Processing...
+              <span>Processing...</span>
             </>
           ) : file ? (
             "Analyze Security Audit"
           ) : (
             "Upload File to Begin"
           )}
-        </Button>
+        </RainbowButton>
       </div>
     </div>
   );

@@ -27,8 +27,8 @@ export function MacbookScrollDemo() {
 const Badge = () => {
   return (
     <div>
-      <Image className="hidden dark:block" src="/lightGithubLogo.png" alt="peerlist" width={40} height={40}/>
-      <Image className="dark:hidden" src="/githubLogo.png" alt="peerlist" width={40} height={40}/>
+      {/* <Image className="hidden dark:block" src="/lightGithubLogo.png" alt="peerlist" width={40} height={40}/>
+      <Image className="dark:hidden" src="/githubLogo.png" alt="peerlist" width={40} height={40}/> */}
     </div>
   );
 };
