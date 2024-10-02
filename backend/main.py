@@ -4,7 +4,6 @@ import re
 import json
 import base64
 import datetime
-import tempfile
 import logging
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -14,8 +13,7 @@ from pydantic import BaseModel
 from llama_index.llms.gemini import Gemini
 from llama_index.core import Document, Settings, VectorStoreIndex, SummaryIndex
 from llama_index.core.node_parser import SentenceSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from llama_index.embeddings.langchain import LangchainEmbedding
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from llama_index.core.tools import QueryEngineTool
 from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
@@ -52,7 +50,7 @@ except Exception as e:
 if not gemini_llm:
     raise ValueError("Failed to initialize Gemini LLM. Please check your Google API key.")
 
-Settings.embed_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+Settings.embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
 # In-memory storage for document embeddings and metadata
 document_store = {}
@@ -193,7 +191,6 @@ class QueryEngineBuilder:
 # Modify the document_store to include the new query engine
 document_store = {}
 
-# Modify the process_document function
 async def process_document(file_path: str, file_hash: str, original_filename: str):
     try:
         file_stat = os.stat(file_path)
@@ -203,6 +200,11 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
         
         doc = fitz.open(file_path)
         page_count = len(doc)
+        
+        # Extract author information
+        metadata = doc.metadata
+        author = metadata.get('author', 'Unknown')
+        
         doc.close()
 
         processor = DocumentProcessor(file_path)
@@ -219,7 +221,8 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
             "upload_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "last_modified": last_modified,
             "created_at": created_at,
-            "page_count": page_count
+            "page_count": page_count,
+            "author": author  # Add the author information
         }
         
         document_store[file_hash] = doc_info
@@ -295,49 +298,6 @@ async def get_file_info(file_id: str):
         created_at=doc_info["created_at"].split()[0]  # Extract date only
     )
 
-# @app.post("/chat")
-# async def chat(chat_request: ChatRequest):
-#     try:
-#         doc_info = get_document_info(chat_request.id)
-#         index = doc_info["index"]
-#         query_engine = index.as_query_engine()
-        
-#         conversation = "\n".join([f"{msg.role}: {msg.content}" for msg in chat_request.history])
-        
-#         prompt = f"""
-#         [SYSTEM MESSAGE]
-#         You are now adopting the persona of Fischer, a knowledgeable and friendly AI assistant
-#         from the CyberStrike AI Audit Management Suite. Your primary role is to assist users in
-#         navigating cybersecurity audit processes, providing insights, and enhancing the overall 
-#         quality of audit reports. Emphasize your expertise in risk assessments, compliance, 
-#         vulnerability analysis, and remediation recommendations. Be personable, approachable, 
-#         and solution-oriented.
-
-#         Given the following conversation history and the user's query, provide a response based on the document content:
-
-#         Conversation history:
-#         {conversation}
-
-#         User query: {chat_request.query}
-
-#         Respond to the user's query using information from the document:
-#         """
-        
-#         response = query_engine.query(prompt)
-        
-#         # Handle different response types
-#         if hasattr(response, 'response'):
-#             response_text = str(response.response)
-#         elif hasattr(response, 'text'):
-#             response_text = str(response.text)
-#         else:
-#             response_text = str(response)
-        
-        
-#         return {"response": response_text}
-#     except Exception as e:
-#         logger.error(f"Error in chat: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
 
 
 
