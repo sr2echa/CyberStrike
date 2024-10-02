@@ -526,7 +526,7 @@ export default function Analyze() {
                       <h3 className="text-xl font-semibold flex-grow font">
                         <ReactMarkdown
                           components={{
-                            code({ node, className, children, ...props }) {
+                            code({ children, ...props }) {
                               return (
                                 <code
                                   className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
