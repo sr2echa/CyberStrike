@@ -10,10 +10,10 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
-from llama_index.llms.gemini import Gemini
+from llama_index.llms.openai import OpenAI
 from llama_index.core import Document, Settings, VectorStoreIndex, SummaryIndex
 from llama_index.core.node_parser import SentenceSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core.tools import QueryEngineTool
 from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
@@ -37,31 +37,30 @@ app.add_middleware(
 )
 
 # Initialize LLM
-gemini_llm = None
+openai_llm = None
 try:
-    google_api_key = os.environ.get("GOOGLE_API_KEY")
-    if google_api_key:
-        gemini_llm = Gemini(api_key=google_api_key)
-        Settings.llm = gemini_llm
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if openai_api_key:
+        openai_llm = OpenAI(api_key=openai_api_key)
+        Settings.llm = openai_llm
         logger.info("Using Gemini LLM")
     else:
         logger.warning("Couldn't find Google API key.")
 except Exception as e:
     logger.error(f"Error initializing LLM: {e}")
 
-if not gemini_llm:
+if not openai_llm:
     raise ValueError("Failed to initialize Gemini LLM. Please check your Google API key.")
 
-Settings.embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
 
-# In-memory storage for document embeddings and metadata
 document_store = {}
 UPLOADS_DIR = "uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 class UploadRequest(BaseModel):
-    file: str  # base64 encoded file
-    filename: str  # Original filename
+    file: str  
+    filename: str  
 
 class UploadResponse(BaseModel):
     status: str
@@ -279,6 +278,8 @@ async def chat(chat_request: ChatRequest):
         vulnerability analysis, and remediation recommendations. Be personable, approachable, 
         and solution-oriented.
 
+        ONLY SAY "Hi there! I'm Fischer, your friendly AI assistant from CyberStrike." ONCE. IF THE USER QUERY CONTAINS YOUR GREETING DON'T GREET THE USER AGAIN
+        
         Given the following conversation history and the user's query, provide a response based on the document content:
 
         Conversation history:
@@ -385,7 +386,7 @@ async def get_key_findings(id_request: IdRequest):
         IMPORTANT: Ensure that your response contains only the JSON object and no additional text.
         """
         
-        response = gemini_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
+        response = openai_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
         
         if not response.text.strip():
             raise ValueError("Empty response from LLM")
@@ -444,7 +445,7 @@ async def get_vulnerabilities(id_request: IdRequest):
         Ensure that your response contains only the JSON array and no additional text.
         """
         
-        response = gemini_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
+        response = openai_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
         
         if not response.text.strip():
             raise ValueError("Empty response from LLM")
@@ -502,7 +503,7 @@ async def summarize_document(summarize_request: SummarizeRequest):
         Summary:
         """
 
-        response = gemini_llm.complete(summarization_prompt)
+        response = openai_llm.complete(summarization_prompt)
         return SummarizeResponse(summary=response.text)
     except Exception as e:
         logger.error(f"Error summarizing document: {e}")
@@ -547,7 +548,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     try:
-        response = gemini_llm.complete("Say 'Gemini is working!'")
+        response = openai_llm.complete("Say 'Gemini is working!'")
         if "Gemini is working" in response.text:
             return {"status": "healthy", "llm": "Gemini"}
         else:

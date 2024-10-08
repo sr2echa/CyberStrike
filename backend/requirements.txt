@@ -6,6 +6,5 @@ llama-index.core
 llama-index.llms.gemini
 llama_index.embeddings.langchain
 langchain-community
-langchain_google_genai
 pymupdf4llm
 google-generativeai
