@@ -4,6 +4,7 @@ import re
 import json
 import base64
 import datetime
+import openai
 import logging
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -14,11 +15,13 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core import Document, Settings, VectorStoreIndex, SummaryIndex
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.core.tools import QueryEngineTool
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
 from llama_index.core.indices.knowledge_graph.base import KnowledgeGraphIndex
 from llama_index.core import StorageContext
+from llama_index.core.objects import ObjectIndex
+from llama_index.agent.openai import OpenAIAgent
 import fitz
 import pymupdf4llm
 
@@ -43,14 +46,14 @@ try:
     if openai_api_key:
         openai_llm = OpenAI(api_key=openai_api_key)
         Settings.llm = openai_llm
-        logger.info("Using Gemini LLM")
+        logger.info("Using OpenAI LLM")
     else:
-        logger.warning("Couldn't find Google API key.")
+        logger.warning("Couldn't find OpenAI API key.")
 except Exception as e:
     logger.error(f"Error initializing LLM: {e}")
 
 if not openai_llm:
-    raise ValueError("Failed to initialize Gemini LLM. Please check your Google API key.")
+    raise ValueError("Failed to initialize OpenAI LLM. Please check your OpenAI API key.")
 
 Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
 
@@ -58,20 +61,22 @@ document_store = {}
 UPLOADS_DIR = "uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
+class FileUpload(BaseModel):
+    file: str
+    filename: str
+
 class UploadRequest(BaseModel):
-    file: str  
-    filename: str  
+    files: List[FileUpload]
 
 class UploadResponse(BaseModel):
     status: str
-    id: str
+    ids: List[str]
 
 class ChatMessage(BaseModel):
     role: str
     content: str
 
 class ChatRequest(BaseModel):
-    id: str
     query: str
     history: List[ChatMessage] = []
 
@@ -91,7 +96,7 @@ class VulnerabilitiesResponse(BaseModel):
 
 class IdRequest(BaseModel):
     id: str
-    
+
 class SummarizeRequest(BaseModel):
     id: str
 
@@ -127,22 +132,25 @@ def get_document_info(file_id: str) -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail="Document not found")
 
 @app.post("/upload", response_model=UploadResponse)
-async def upload_document(upload_request: UploadRequest, background_tasks: BackgroundTasks):
+async def upload_documents(upload_request: UploadRequest, background_tasks: BackgroundTasks):
     try:
-        file_content = base64.b64decode(upload_request.file)
-        file_hash = hashlib.md5(file_content).hexdigest()
-        
-        file_path = os.path.join(UPLOADS_DIR, f"{file_hash}.pdf")
-        with open(file_path, "wb") as f:
-            f.write(file_content)
+        file_ids = []
+        for file_upload in upload_request.files:
+            file_content = base64.b64decode(file_upload.file)
+            file_hash = hashlib.md5(file_content).hexdigest()
+            
+            file_path = os.path.join(UPLOADS_DIR, f"{file_hash}.pdf")
+            with open(file_path, "wb") as f:
+                f.write(file_content)
 
-        background_tasks.add_task(process_document, file_path, file_hash, upload_request.filename)
+            background_tasks.add_task(process_document, file_path, file_hash, file_upload.filename)
+            file_ids.append(file_hash)
         
-        return UploadResponse(status="success", id=file_hash)
+        return UploadResponse(status="success", ids=file_ids)
     except Exception as e:
         logger.error(f"Error processing upload: {e}")
         raise HTTPException(status_code=500, detail="Error processing upload")
-
+    
 class DocumentProcessor:
     def __init__(self, file_path: str):
         self.file_path = file_path
@@ -248,7 +256,7 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
             "last_modified": last_modified,
             "created_at": created_at,
             "page_count": page_count,
-            "author": author  
+            "author": author
         }
         
         document_store[file_hash] = doc_info
@@ -260,47 +268,181 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
     except Exception as e:
         logger.error(f"Error processing document: {e}")
 
-# Modify the chat endpoint
+def get_available_documents():
+    documents = {}
+    for filename in os.listdir(UPLOADS_DIR):
+        if filename.endswith("_info.json"):
+            file_id = filename[:-10]  # Remove "_info.json"
+            with open(os.path.join(UPLOADS_DIR, filename), 'r') as f:
+                doc_info = json.load(f)
+            documents[file_id] = doc_info
+    return documents
+
+def summarize_for_tool(summary_content):
+    """
+    Generates a compact summary of the provided content using OpenAI's API.
+
+    Parameters:
+        api_key (str): Your OpenAI API key.
+        summary_content (str): The content to summarize.
+
+    Returns:
+        str: A concise summary of the content, limited to 100 words.
+    """
+    # Construct the prompt for summarization
+    prompt = f"Please summarize the following content in no more than 100 words for easy tool selection:\n\n{summary_content}"
+
+    try:
+        # Call the OpenAI API for summarization
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant for summarizing content."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,  # Allow some buffer for the response
+            temperature=0.1
+        )
+
+        # Extract the summary from the response
+        summary = response['choices'][0]['message']['content'].strip()
+        return summary
+
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
 @app.post("/chat")
 async def chat(chat_request: ChatRequest):
     try:
-        doc_info = get_document_info(chat_request.id)
-        query_engine = doc_info["query_engine"]
+        available_documents = get_available_documents()
+        
+        if not available_documents:
+            return {"response": "No documents are currently available in the system. Please upload some documents first."}
+
+        docs_list = {}
+        vector_index = {}
+        summary_index = {}
+        summary_to_identify = {}
+        agents = {}
+        query_engines = {}
+        all_nodes = []
+        
+        titles = [doc_info["filename"] for doc_info in available_documents.values()]
+        
+        for doc_name in titles:
+            file_id = next(id for id, info in available_documents.items() if info["filename"] == doc_name)
+            doc_info = get_document_info(file_id)
+            
+            if 'full_text' not in doc_info:
+                logger.warning(f"Full text not found for document {doc_name}. Skipping...")
+                continue
+            
+            document = Document(text=doc_info['full_text'])
+            splitter = SentenceSplitter(chunk_size=1024)
+            nodes = splitter.get_nodes_from_documents([document])
+            
+            doc_name = doc_name[:-4]  # Remove .pdf extension
+            docs_list[doc_name] = DocumentProcessor(os.path.join(UPLOADS_DIR, f"{file_id}.pdf"))
+            docs_list[doc_name].full_text = doc_info['full_text']
+            docs_list[doc_name].nodes = nodes
+            all_nodes.extend(nodes)
+            
+            vector_index[doc_name] = VectorStoreIndex(nodes)
+            summary_index[doc_name] = SummaryIndex(nodes)
+            node_ids = [node_id for value in summary_index[doc_name].ref_doc_info.values() for node_id in value.node_ids[:4]]
+            summary_to_identify[doc_name] = summarize_for_tool(summary_index[doc_name].docstore.get_nodes(node_ids))
+            
+            vector_query_engine = vector_index[doc_name].as_query_engine(llm=Settings.llm)
+            summary_query_engine = summary_index[doc_name].as_query_engine(llm=Settings.llm)
+            query_engine_tools = [
+                QueryEngineTool(
+                    query_engine=vector_query_engine,
+                    metadata=ToolMetadata(
+                        name="vector_tool",
+                        description=(
+                            "Useful for questions related to specific aspects of"
+                            f" {doc_name} (e.g the vulnerabilities, key findings)."
+                        ),
+                    ),
+                ),
+                QueryEngineTool(
+                    query_engine=summary_query_engine,
+                    metadata=ToolMetadata(
+                        name="summary_tool",
+                        description=(
+                            "Useful for any requests that require a holistic summary"
+                            f" of EVERYTHING about {doc_name}. For questions about"
+                            " more specific sections, please use the vector_tool."
+                        ),
+                    ),
+                ),
+            ]   
+            function_llm = OpenAI(model="gpt-4o-mini")
+            agent = OpenAIAgent.from_tools(
+                query_engine_tools,
+                llm=function_llm,
+                verbose=True,
+                system_prompt=f"""\
+        You are a specialized agent designed to answer queries about {doc_name}.
+        Choose this document based on {summary_to_identify[doc_name]}
+        You must ALWAYS use at least one of the tools provided when answering a question; do NOT rely on prior knowledge.\
+        """,
+            )
+            agents[doc_name] = agent
+            query_engines[doc_name] = vector_index[doc_name].as_query_engine(
+                similarity_top_k=3
+            )
+        
+        # Rest of the function remains the same
+        all_tools = []
+        for docs in titles:
+            docs = docs[:-4]
+            summary = (
+                f"This content contains cybersecurity audits about {docs}. Use"
+                f" this tool if you want to answer any questions about {summary_to_identify[docs]}.\n"
+            )
+            doc_tool = QueryEngineTool(
+                query_engine=agents[docs],
+                metadata=ToolMetadata(
+                    name=f"tool_{docs}",
+                    description=summary,
+                ),
+            )
+            all_tools.append(doc_tool)
+        
+        obj_index = ObjectIndex.from_objects(
+            all_tools,
+            index_cls=VectorStoreIndex,
+        )
+        top_agent = OpenAIAgent.from_tools(
+            tool_retriever=obj_index.as_retriever(similarity_top_k=3),
+            system_prompt=""" \
+        You are Fischer, a knowledgeable and friendly AI assistant from the CyberStrike AI Audit Management Suite. 
+        Your primary role is to assist users in navigating cybersecurity audit processes, providing insights, and 
+        enhancing the overall quality of audit reports. Emphasize your expertise in risk assessments, compliance, 
+        vulnerability analysis, and remediation recommendations. Be personable, approachable, and solution-oriented.
+
+        Please always use the tools provided to answer a question. Do not rely on prior knowledge.
+        """,
+            verbose=True,
+        )
+        
+        base_index = VectorStoreIndex(all_nodes)
+        base_query_engine = base_index.as_query_engine(similarity_top_k=4)
         
         conversation = "\n".join([f"{msg.role}: {msg.content}" for msg in chat_request.history])
         
-        prompt = f"""
-        [SYSTEM MESSAGE]
-        You are now adopting the persona of Fischer, a knowledgeable and friendly AI assistant
-        from the CyberStrike AI Audit Management Suite. Your primary role is to assist users in
-        navigating cybersecurity audit processes, providing insights, and enhancing the overall 
-        quality of audit reports. Emphasize your expertise in risk assessments, compliance, 
-        vulnerability analysis, and remediation recommendations. Be personable, approachable, 
-        and solution-oriented.
-
-        ONLY SAY "Hi there! I'm Fischer, your friendly AI assistant from CyberStrike." ONCE. IF THE USER QUERY CONTAINS YOUR GREETING DON'T GREET THE USER AGAIN
-        
-        Given the following conversation history and the user's query, provide a response based on the document content:
+        response = top_agent.chat(f"""
+        Given the following conversation history and the user's query, provide a response based on the content of the documents:
 
         Conversation history:
         {conversation}
 
         User query: {chat_request.query}
 
-        Respond to the user's query using information from the document:
-        """
+        Respond to the user's query using information from the documents:
+        """)
         
-        response = query_engine.query(prompt)
-        
-        # Handle different response types
-        if hasattr(response, 'response'):
-            response_text = str(response.response)
-        elif hasattr(response, 'text'):
-            response_text = str(response.text)
-        else:
-            response_text = str(response)
-        
-        return {"response": response_text}
+        return {"response": str(response)}
     except Exception as e:
         logger.error(f"Error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
