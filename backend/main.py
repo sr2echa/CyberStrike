@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from llama_index.llms.openai import OpenAI
+from llama_index.llms.gemini import Gemini
 from llama_index.core import Document, Settings, VectorStoreIndex, SummaryIndex
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.openai import OpenAIEmbedding
@@ -39,21 +40,33 @@ app.add_middleware(
     allow_credentials=True
 )
 
-# Initialize LLM
 openai_llm = None
 try:
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     if openai_api_key:
         openai_llm = OpenAI(api_key=openai_api_key)
-        Settings.llm = openai_llm
         logger.info("Using OpenAI LLM")
     else:
         logger.warning("Couldn't find OpenAI API key.")
 except Exception as e:
-    logger.error(f"Error initializing LLM: {e}")
+    logger.error(f"Error initializing OpenAI LLM: {e}")
 
 if not openai_llm:
     raise ValueError("Failed to initialize OpenAI LLM. Please check your OpenAI API key.")
+
+gemini_llm = None
+try:
+    google_api_key = os.environ.get("GOOGLE_API_KEY")
+    if google_api_key:
+        gemini_llm = Gemini(api_key=google_api_key)
+        logger.info("Using Gemini LLM")
+    else:
+        logger.warning("Couldn't find Google API key.")
+except Exception as e:
+    logger.error(f"Error initializing Gemini LLM: {e}")
+
+if not gemini_llm:
+    raise ValueError("Failed to initialize Gemini LLM. Please check your Google API key.")
 
 Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
 
@@ -528,7 +541,7 @@ async def get_key_findings(id_request: IdRequest):
         IMPORTANT: Ensure that your response contains only the JSON object and no additional text.
         """
         
-        response = openai_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
+        response = gemini_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
         
         if not response.text.strip():
             raise ValueError("Empty response from LLM")
@@ -587,7 +600,7 @@ async def get_vulnerabilities(id_request: IdRequest):
         Ensure that your response contains only the JSON array and no additional text.
         """
         
-        response = openai_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
+        response = gemini_llm.complete(prompt + "\n\nDocument content:\n" + full_text)
         
         if not response.text.strip():
             raise ValueError("Empty response from LLM")
@@ -645,7 +658,7 @@ async def summarize_document(summarize_request: SummarizeRequest):
         Summary:
         """
 
-        response = openai_llm.complete(summarization_prompt)
+        response = gemini_llm.complete(summarization_prompt)
         return SummarizeResponse(summary=response.text)
     except Exception as e:
         logger.error(f"Error summarizing document: {e}")
