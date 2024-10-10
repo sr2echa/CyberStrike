@@ -18,7 +18,7 @@ import {
     DropdownMenuTrigger,
   } from "./dropdown-menu"
   import { ModeToggle } from "./toggle";
-
+  import {PieChartDonutWithText} from "./pie-chart-donut-withtext"
   
 export {
     GlowingStarsBackgroundCard,
@@ -41,4 +41,5 @@ export {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
     ModeToggle,
+    PieChartDonutWithText
 }
