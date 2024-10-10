@@ -18,6 +18,7 @@ import {
   ArrowBigRight,
   ArrowRight,
   ArrowLeft,
+  PieChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import ReactMarkdown from "react-markdown";
 import Image from "next/image";
+import { PieChartDonutWithText } from "@/components/ui";
 
 // Add these type definitions at the top of the file
 type Vulnerability = {
@@ -87,10 +89,60 @@ export default function Analyze() {
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [isLoadingFileInfo, setIsLoadingFileInfo] = useState(true);
-  const [showVisualisations,setShowVisualisations] = useState(false);
+  const [showVisualisations,setShowVisualisations] = useState(true);
   const [files, setFiles] = useState<{fileName: string, fileId: string}[]>([]);
   const [allFilesLoading, setAllFilesLoading] = useState(true);
   const [activeFile, setActiveFile] = useState<string | null>("");
+  const [graphData, setGraphData] = useState<any>(null);
+  const [allFileIds,setAllFileIds] = useState<String[]>([]);
+  const [chartData,setChartData] = useState<any>([
+    { browser: "Compliance Audit", fill: "hsl(var(--chart-1))", visitors: 1 },
+    { browser: "Vulnerability Assessment", fill: "hsl(var(--chart-2))", visitors: 3 },
+    { browser: "Penetration Testing", fill: "hsl(var(--chart-3))", visitors: 0 },
+    { browser: "API Security Audit", fill: "hsl(var(--chart-4))", visitors: 0 },
+    { browser: "Incident Response Audit", fill: "hsl(var(--chart-5))", visitors: 0 },
+    { browser: "Security Policy Review", fill: "hsl(var(--chart-6))", visitors: 0 },
+    { browser: "Network Security Audit", fill: "hsl(var(--chart-7))", visitors: 0 },
+  ]);
+
+  useEffect(()=>{
+    const fetchGraphData = async () => {
+      try {
+        const response = await fetch(`${backendUrl}/categories`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ "file_list" : allFileIds }),
+        });
+
+
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Graph data:", data);
+        setChartData( [
+          { browser: "Compliance Audit", fill: "hsl(var(--chart-1))", count: data.categories["Compliance Audit"].length },
+          { browser: "Vulnerability Assessment", fill: "hsl(var(--chart-2))", count: data.categories["Vulnerability Assessment"].length },
+          { browser: "Penetration Testing", fill: "hsl(var(--chart-3))", count: data.categories["Penetration Testing"].length },
+          { browser: "API Security Audit", fill: "hsl(var(--chart-4))", count: data.categories["API Security Audit"].length },
+          { browser: "Incident Response Audit", fill: "hsl(var(--chart-5))", count: data.categories["Incident Response Audit"].length },
+          { browser: "Security Policy Review", fill: "hsl(var(--chart-6))", count: data.categories["Security Policy Review"].length },
+          { browser: "Network Security Audit", fill: "hsl(var(--chart-7))", count: data.categories["Network Security Audit"].length },
+        ]);
+        setGraphData(data);
+      } catch (error) {
+        console.error("Error fetching graph data:", error);
+      }
+    };
+
+    if(allFileIds.length>0){
+      fetchGraphData()
+    }
+  },[allFileIds,files])
 
   useEffect(() => {
     const fetchVulnerabilities = async () => {
@@ -212,6 +264,10 @@ export default function Analyze() {
       })=>({fileName:Object.keys(fileId), fileId:Object.values(fileId)}))
       setFiles(filesArray)
       setAllFilesLoading(false)
+      const allIdsArray=fileIds.ids.map((fileId: {  
+        fileId: string;
+      })=>(Object.values(fileId)[0]))
+      setAllFileIds(allIdsArray)
     }
   },[])
 
@@ -400,13 +456,25 @@ export default function Analyze() {
             File Analytics
           </TabButton>
           <TabButton active={showVisualisations} onClick={() => setShowVisualisations(true)}>
-            Visualisations
+            Visualisations 
           </TabButton>
           <TabButton active={showVisualisations} onClick={() => setShowVisualisations(true)}>
             <ArrowRight />
           </TabButton>
         </div>
-        {!showVisualisations && 
+        {showVisualisations ? 
+        <div className="px-4">
+            <div className="border flex flex-col items-center gap-8 justify-center p-8">
+              <div className="flex gap-4 items-center">
+                <div className="font-bold ">
+                  Graphs
+                </div>
+              </div>
+              <PieChartDonutWithText totalNoOfFiles={files.length} chartData={chartData} />
+            </div>   
+        </div>  
+        :
+        <div>
           <div className="p-4  overflow-y-auto">
             <Card className="mb-4">
               <CardHeader>
@@ -616,7 +684,8 @@ export default function Analyze() {
               </Card>
             )}
           </div>
-        }
+        </div>
+      }
       </div>
       
     </div>

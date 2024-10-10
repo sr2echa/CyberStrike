@@ -21,13 +21,13 @@ import {
 
 export const description = "A donut chart with text"
 
-const chartData = [
-  { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
-  { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
-  { browser: "firefox", visitors: 287, fill: "var(--color-firefox)" },
-  { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
-  { browser: "other", visitors: 190, fill: "var(--color-other)" },
-]
+// const chartData = [
+//   { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
+//   { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
+//   { browser: "firefox", visitors: 287, fill: "var(--color-firefox)" },
+//   { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
+//   { browser: "other", visitors: 190, fill: "var(--color-other)" },
+// ]
 
 const chartConfig = {
   visitors: {
@@ -55,10 +55,13 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function Component() {
-  const totalVisitors = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.visitors, 0)
-  }, [])
+export function PieChartDonutWithText({totalNoOfFiles,chartData}:{
+  totalNoOfFiles:number,
+  chartData:any
+}) {
+  // const totalVisitors = React.useMemo(() => {
+  //   return chartData.reduce((acc, curr) => acc + curr.visitors, 0)
+  // }, [])
 
   return (
     <Card className="flex flex-col">
@@ -98,7 +101,7 @@ export function Component() {
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {totalVisitors.toLocaleString()}
+                          {totalNoOfFiles}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
