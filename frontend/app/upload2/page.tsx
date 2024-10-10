@@ -85,9 +85,11 @@ export default function Page() {
             }));
             const updatedFiles = [...newFiles, ...uploadedFiles].slice(0, 10);
             setUploadedFiles(updatedFiles);
-            localStorage.setItem("uploadedFiles", JSON.stringify(updatedFiles));
-  
-            router.push(`/analyze/${data.ids[0]}`);
+            console.log(uploadedFiles)
+            // localStorage.setItem("uploadedFiles", JSON.stringify(updatedFiles));
+            await localStorage.setItem("responseFromBackend","")
+            await localStorage.setItem("responseFromBackend", JSON.stringify(data))
+            router.push(`/analyze2/${data.user}`);
           } else {
             console.error("Response does not contain ids");
           }
@@ -157,11 +159,11 @@ export default function Page() {
               <div className="w-full max-w-4xl mx-auto min-h-96 border-dashed border-4 bg-white dark:bg-[#0a0a0a] border-neutral-200 dark:border-neutral-800 rounded-lg">
                 <FileUpload onChange={handleFileUpload} />
               </div>
-              <div className="mt-4">
+              {/* <div className="mt-4">
                 {files.map((file, index) => (
                   <p key={index} className="text-sm">{file.name}</p>
                 ))}
-              </div>
+              </div> */}
               <RainbowButton
                 className={`w-full mt-8 transition-colors p-4 rounded-xl flex items-center justify-center ${
                   isLoading || files.length === 0
@@ -224,9 +226,9 @@ export default function Page() {
                             hour12: true,
                           })}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                        {/* <p className="text-xs text-gray-500 dark:text-gray-500">
                           ID: {uploadedFile.id.slice(0, 8)}...
-                        </p>
+                        </p> */}
                       </div>
                     </div>
                   ))}
@@ -285,9 +287,9 @@ export default function Page() {
                         hour12: true,
                       })}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                    {/* <p className="text-xs text-gray-500 dark:text-gray-500">
                       ID: {uploadedFile.id.slice(0, 8)}...
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               ))}

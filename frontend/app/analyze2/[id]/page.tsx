@@ -15,6 +15,9 @@ import {
   Calendar,
   Trash2,
   Loader2,
+  ArrowBigRight,
+  ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +87,10 @@ export default function Analyze() {
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [isLoadingFileInfo, setIsLoadingFileInfo] = useState(true);
+  const [showVisualisations,setShowVisualisations] = useState(false);
+  const [files, setFiles] = useState<{fileName: string, fileId: string}[]>([]);
+  const [allFilesLoading, setAllFilesLoading] = useState(true);
+  const [activeFile, setActiveFile] = useState<string | null>("");
 
   useEffect(() => {
     const fetchVulnerabilities = async () => {
@@ -94,7 +101,7 @@ export default function Analyze() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ id }),
+          body: JSON.stringify({ id:activeFile }),
         });
 
         if (!response.ok) {
@@ -119,7 +126,7 @@ export default function Analyze() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ id }),
+          body: JSON.stringify({ id: activeFile }),
         });
 
         if (!response.ok) {
@@ -144,7 +151,7 @@ export default function Analyze() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ id }),
+          body: JSON.stringify({ id: activeFile }),
         });
 
         if (!response.ok) {
@@ -169,7 +176,7 @@ export default function Analyze() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ id }),
+          body: JSON.stringify({ id:activeFile }),
         });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -193,7 +200,20 @@ export default function Analyze() {
     if (storedMessages) {
       setChatMessages(JSON.parse(storedMessages));
     }
-  }, [id, backendUrl]);
+  }, [id, backendUrl,activeFile]);
+
+  useEffect(()=>{
+    const allFiles=localStorage.getItem("responseFromBackend")
+    if(allFiles){
+      const fileIds=JSON.parse(allFiles)
+      const filesArray=fileIds.ids.map((fileId: {
+        fileName: string;
+        fileId: string;
+      })=>({fileName:Object.keys(fileId), fileId:Object.values(fileId)}))
+      setFiles(filesArray)
+      setAllFilesLoading(false)
+    }
+  },[])
 
   useEffect(() => {
     // Save chat messages to localStorage whenever they change
@@ -371,238 +391,234 @@ export default function Analyze() {
         </div>
       </div>
 
-      {/* Analysis Section */}
-      <div className="w-1/2 p-4 overflow-y-auto">
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>All files</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoadingFileInfo ? (
-              <div className="flex justify-center items-center h-40">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : fileInfo ? (
-              <>
-                <div className="flex justify-center mb-4">
-                  <File className="w-24 h-24 text-gray-600 dark:text-gray-400" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FileInfoItem icon={<FileText />} label="File Name" value={fileInfo.file_name} />
-                  <FileInfoItem icon={<Search />} label="File Size" value={fileInfo.file_size} />
-                  <FileInfoItem
-                    icon={<AlertTriangle />}
-                    label="Last Edited"
-                    value={fileInfo.last_edited}
-                  />
-                  <FileInfoItem
-                    icon={<FileText />}
-                    label="Page Count"
-                    value={fileInfo.page_count.toString()}
-                  />
-                  <FileInfoItem icon={<Cpu />} label="Author" value={fileInfo.author} />
-                  <FileInfoItem
-                    icon={<Calendar />}
-                    label="Created At"
-                    value={fileInfo.created_at}
-                  />
-                </div>
-              </>
-            ) : (
-              <p>No file information available.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="mb-4 flex space-x-2">
-          <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
-            Summary
+      <div className="flex flex-1 flex-col w-[100%]">
+        <div className="mb-4 flex justify-center gap-4 pt-8 px-4 space-x-2">
+          <TabButton active={!showVisualisations} onClick={() => setShowVisualisations(false)}>
+            <ArrowLeft />
           </TabButton>
-          <TabButton active={activeTab === "findings"} onClick={() => setActiveTab("findings")}>
-            Key Findings
+          <TabButton active={!showVisualisations} onClick={() => setShowVisualisations(false)}>
+            File Analytics
           </TabButton>
-          <TabButton
-            active={activeTab === "vulnerabilities"}
-            onClick={() => setActiveTab("vulnerabilities")}
-          >
-            Vulnerabilities
+          <TabButton active={showVisualisations} onClick={() => setShowVisualisations(true)}>
+            Visualisations
+          </TabButton>
+          <TabButton active={showVisualisations} onClick={() => setShowVisualisations(true)}>
+            <ArrowRight />
           </TabButton>
         </div>
+        {!showVisualisations && 
+          <div className="p-4  overflow-y-auto">
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>All files</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                {allFilesLoading ? (
+                  <div className="flex justify-center items-center h-40">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : files.length > 0 ? (
+                  files.map((file, index) => (
+                    <FileListCard key={index} file={file} onClick={setActiveFile} activeFile={activeFile} />
+                  ))
+                ) : (
+                  <p>No files found.</p>
+                )}
+              </CardContent>
+            </Card>
 
-        {activeTab === "summary" && (
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Zap className="mr-2 h-6 w-6" />
-                Executive Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingSummary ? (
-                <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : summary ? (
-                <div className="prose dark:prose-invert max-w-none">
-                  <SummaryRenderer />
-                </div>
-              ) : (
-                <p>No summary available.</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "findings" && (
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Shield className="mr-2 h-6 w-6" />
+            <div className="mb-4 flex space-x-2">
+              <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
+                Summary
+              </TabButton>
+              <TabButton active={activeTab === "findings"} onClick={() => setActiveTab("findings")}>
                 Key Findings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingKeyFindings ? (
-                <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : keyFindings ? (
-                Object.entries(keyFindings).map(([category, data], index) => (
-                  <div key={index} className="mb-6">
-                    <h3 className="text-xl font-semibold mb-2">{category}</h3>
-                    {Object.entries(data).map(([subCategory, subData], subIndex) => (
-                      <div key={subIndex} className="mb-4 ml-4">
-                        <h4 className="text-lg font-medium mb-2">{subCategory}</h4>
-                        {Object.entries(subData).map(([key, value], i) => (
-                          <div key={i} className="mb-2">
-                            <strong>{key.charAt(0).toUpperCase() + key.slice(1)}:</strong>
-                            {Array.isArray(value) ? (
-                              <ul className="list-disc list-inside ml-2">
-                                {value.map((item, j) => (
-                                  <li key={j} className="text-gray-700 dark:text-gray-300">
-                                    {item}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <span className="ml-2 text-gray-700 dark:text-gray-300">
-                                {String(value)}
-                              </span>
-                            )}
+              </TabButton>
+              <TabButton
+                active={activeTab === "vulnerabilities"}
+                onClick={() => setActiveTab("vulnerabilities")}
+              >
+                Vulnerabilities
+              </TabButton>
+            </div>
+
+            {activeTab === "summary" && (
+              <Card className="mb-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Zap className="mr-2 h-6 w-6" />
+                    Executive Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingSummary ? (
+                    <div className="flex justify-center items-center h-40">
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                  ) : summary ? (
+                    <div className="prose dark:prose-invert max-w-none">
+                      <SummaryRenderer />
+                    </div>
+                  ) : (
+                    <p>No summary available.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "findings" && (
+              <Card className="mb-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Shield className="mr-2 h-6 w-6" />
+                    Key Findings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingKeyFindings ? (
+                    <div className="flex justify-center items-center h-40">
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                  ) : keyFindings ? (
+                    Object.entries(keyFindings).map(([category, data], index) => (
+                      <div key={index} className="mb-6">
+                        <h3 className="text-xl font-semibold mb-2">{category}</h3>
+                        {Object.entries(data).map(([subCategory, subData], subIndex) => (
+                          <div key={subIndex} className="mb-4 ml-4">
+                            <h4 className="text-lg font-medium mb-2">{subCategory}</h4>
+                            {Object.entries(subData).map(([key, value], i) => (
+                              <div key={i} className="mb-2">
+                                <strong>{key.charAt(0).toUpperCase() + key.slice(1)}:</strong>
+                                {Array.isArray(value) ? (
+                                  <ul className="list-disc list-inside ml-2">
+                                    {value.map((item, j) => (
+                                      <li key={j} className="text-gray-700 dark:text-gray-300">
+                                        {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <span className="ml-2 text-gray-700 dark:text-gray-300">
+                                    {String(value)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </div>
-                    ))}
-                  </div>
-                ))
-              ) : (
-                <p>No key findings available.</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                    ))
+                  ) : (
+                    <p>No key findings available.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
-        {activeTab === "vulnerabilities" && (
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Lock className="mr-2 h-6 w-6" />
-                Vulnerabilities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingVulnerabilities ? (
-                <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : vulnerabilities.length > 0 ? (
-                vulnerabilities.map((vuln, index) => (
-                  <div
-                    key={index}
-                    className="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-                  >
-                    <div className="flex items-stretch mb-5">
-                      <div className={`w-2 mr-4 ${getCriticalityColor(vuln.criticality)}`}></div>
-                      <h3 className="text-xl font-semibold flex-grow font">
-                        <ReactMarkdown
-                          components={{
-                            code({ children, ...props }) {
-                              return (
-                                <code
-                                  className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
-                                  {...props}
-                                >
-                                  {children}
-                                </code>
-                              );
-                            },
-                          }}
-                        >
-                          {vuln.description}
-                        </ReactMarkdown>
-                      </h3>
+            {activeTab === "vulnerabilities" && (
+              <Card className="mb-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Lock className="mr-2 h-6 w-6" />
+                    Vulnerabilities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingVulnerabilities ? (
+                    <div className="flex justify-center items-center h-40">
+                      <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
-                    <div className="mb-2 flex items-center">
-                      <strong className="mr-2">Criticality Score:</strong> {vuln.criticality}
-                      <Progress
-                        value={vuln.criticality * 10}
-                        className="w-24 ml-2"
-                        // indicatorClassName={getCriticalityColor(vuln.criticality)}
-                      />
-                    </div>
-                    <p className="mb-2">
-                      <strong>Reasoning:</strong>
-                      <ReactMarkdown
-                        components={{
-                          p: ({ children }) => (
-                            <p className="text-gray-700 dark:text-gray-300">{children}</p>
-                          ),
-                          code({children, ...props }) {
-                            return (
-                              <code
-                                className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            );
-                          },
-                        }}
+                  ) : vulnerabilities.length > 0 ? (
+                    vulnerabilities.map((vuln, index) => (
+                      <div
+                        key={index}
+                        className="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
                       >
-                        {vuln.reasoning}
-                      </ReactMarkdown>
-                    </p>
-                    <p>
-                      <strong>Mitigation:</strong>
-                      <ReactMarkdown
-                        components={{
-                          p: ({ children }) => (
-                            <p className="text-gray-700 dark:text-gray-300">{children}</p>
-                          ),
-                          code({ children, ...props }) {
-                            return (
-                              <code
-                                className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            );
-                          },
-                        }}
-                      >
-                        {vuln.mitigation}
-                      </ReactMarkdown>
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p>No vulnerabilities found.</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                        <div className="flex items-stretch mb-5">
+                          <div className={`w-2 mr-4 ${getCriticalityColor(vuln.criticality)}`}></div>
+                          <h3 className="text-xl font-semibold flex-grow font">
+                            <ReactMarkdown
+                              components={{
+                                code({ children, ...props }) {
+                                  return (
+                                    <code
+                                      className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
+                                      {...props}
+                                    >
+                                      {children}
+                                    </code>
+                                  );
+                                },
+                              }}
+                            >
+                              {vuln.description}
+                            </ReactMarkdown>
+                          </h3>
+                        </div>
+                        <div className="mb-2 flex items-center">
+                          <strong className="mr-2">Criticality Score:</strong> {vuln.criticality}
+                          <Progress
+                            value={vuln.criticality * 10}
+                            className="w-24 ml-2"
+                            // indicatorClassName={getCriticalityColor(vuln.criticality)}
+                          />
+                        </div>
+                        <p className="mb-2">
+                          <strong>Reasoning:</strong>
+                          <ReactMarkdown
+                            components={{
+                              p: ({ children }) => (
+                                <p className="text-gray-700 dark:text-gray-300">{children}</p>
+                              ),
+                              code({children, ...props }) {
+                                return (
+                                  <code
+                                    className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </code>
+                                );
+                              },
+                            }}
+                          >
+                            {vuln.reasoning}
+                          </ReactMarkdown>
+                        </p>
+                        <p>
+                          <strong>Mitigation:</strong>
+                          <ReactMarkdown
+                            components={{
+                              p: ({ children }) => (
+                                <p className="text-gray-700 dark:text-gray-300">{children}</p>
+                              ),
+                              code({ children, ...props }) {
+                                return (
+                                  <code
+                                    className="bg-gray-200 dark:bg-gray-700 px-1 rounded"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </code>
+                                );
+                              },
+                            }}
+                          >
+                            {vuln.mitigation}
+                          </ReactMarkdown>
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p>No vulnerabilities found.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        }
       </div>
+      
     </div>
   );
 }
@@ -658,11 +674,26 @@ function TabButton({
       className={`px-4 py-2 rounded-lg transition-colors ${
         active
           ? "bg-black text-white dark:bg-white dark:text-black"
-          : "bg-gray-200 text-black hover:bg-gray-300 dark:bg-gray-700/50 dark:text-white dark:hover:bg-gray-600/50"
+          : "bg-transparent text-black hover:bg-gray-300  dark:text-white dark:hover:bg-gray-600/50"
       }`}
       onClick={onClick}
     >
       {children}
     </button>
   );
+}
+
+function FileListCard({file,activeFile,onClick}:{file: {fileName: string, fileId: string},activeFile:string | null,onClick:any}){
+  return(
+    <div onClick={()=>{
+      // console.log("clicked",file.fileId[0])
+      onClick(file.fileId[0])}} className={`cursor-pointer truncate border rounded p-3 items-center  gap-4 flex ${activeFile == file.fileId && "border-white border-2"}`}>
+      <div>
+        <File />
+      </div>
+      <div>
+        {file.fileName}
+      </div>
+    </div>
+  )
 }
