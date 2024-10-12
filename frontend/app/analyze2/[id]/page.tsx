@@ -19,6 +19,10 @@ import {
   ArrowRight,
   ArrowLeft,
   PieChart,
+  ArrowBigUp,
+  MousePointer2,
+  MousePointer2Icon,
+  MousePointerClick,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,6 +109,17 @@ export default function Analyze() {
     { browser: "Network Security Audit", fill: "hsl(var(--chart-7))", visitors: 0 },
   ]);
 
+  async function storeVulnerabilities(activeFile: string, vulnerabilities: Vulnerability[]) {
+    const vulnerabilitiesJson = JSON.stringify(vulnerabilities);
+    localStorage.setItem(activeFile+"Vulnerabilities", vulnerabilitiesJson);
+  }
+
+  async function storeSummary(activeFile: string, vulnerabilities: Vulnerability[]) {
+    const vulnerabilitiesJson = JSON.stringify(vulnerabilities);
+    localStorage.setItem(activeFile+"Summary", vulnerabilitiesJson);
+  }
+
+  // Fetch Graph Data
   useEffect(()=>{
     const fetchGraphData = async () => {
       try {
@@ -115,8 +130,6 @@ export default function Analyze() {
           },
           body: JSON.stringify({ "file_list" : allFileIds }),
         });
-
-
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -145,31 +158,44 @@ export default function Analyze() {
   },[allFileIds,files])
 
   useEffect(() => {
+
+    // fetching Vulnerabilities
     const fetchVulnerabilities = async () => {
       setIsLoadingVulnerabilities(true);
-      try {
-        const response = await fetch(`${backendUrl}/vulnerabilities`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ id:activeFile }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Vulnerabilities data:", data);
-        setVulnerabilities(data.vulnerabilities as Vulnerability[]);
-      } catch (error) {
-        console.error("Error fetching vulnerabilities:", error);
-      } finally {
-        setIsLoadingVulnerabilities(false);
+      if(activeFile){
+        const vul=await localStorage.getItem(activeFile)
+        if(vul){
+          const vulnerabilitiesJson=await JSON.parse(vul)
+          setVulnerabilities(vulnerabilitiesJson)
+        }else{
+          try {
+            const response = await fetch(`${backendUrl}/vulnerabilities`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ id:activeFile }),
+            });
+    
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            console.log("Vulnerabilities data:", data);
+            await setVulnerabilities(data.vulnerabilities as Vulnerability[]);
+            storeVulnerabilities(activeFile, data.vulnerabilities);
+          } catch (error) {
+            console.error("Error fetching vulnerabilities:", error);
+          } finally {
+            setIsLoadingVulnerabilities(false);
+          }
+        }        
       }
-    };
 
+    };
+    
+    //fetch KeyFindings
     const fetchKeyFindings = async () => {
       setIsLoadingKeyFindings(true);
       try {
@@ -356,8 +382,36 @@ export default function Analyze() {
   );
 
   return (
+    // <div className="flex h-[calc(100vh-72px)]">
+    //   {/* Chatbot Section */}
+    //   <div className="w-1/2 p-4 flex flex-col overflow-hidden ml-3">
+    //     <div className="flex-grow overflow-y-auto mb-6 px-6 py-4 bg-gray-100 dark:bg-zinc-400/5 rounded-lg relative">
+    //       {chatMessages.length === 0 && (
+    //         <>
+    //           <div className="absolute inset-0 flex items-center justify-center opacity-10">
+    //             <Image
+    //               src="/whiteFischerLogo.png"
+    //               alt="Fischer Logo light"
+    //               width={200}
+    //               height={200}
+    //               className="hidden dark:block"
+    //             />
+    //             <Image
+    //               src="/blackFischerLogo.png"
+    //               alt="Fischer Logo dark"
+    //               width={200}
+    //               height={200}
+    //               className="dark:hidden"
+    //             />
+    //           </div>
+    //           <div className="flex items-center justify-center">
+    //             <p className="text-lg font-semibold text-gray-400/50 dark:text-gray-600/40 font-mono">
+    //               Chat with the audit report
+    //             </p>
+    //           </div>
+    //         </>
+    //       )}
     <div className="flex h-[calc(100vh-72px)]">
-      {/* Chatbot Section */}
       <div className="w-1/2 p-4 flex flex-col overflow-hidden ml-3">
         <div className="flex-grow overflow-y-auto mb-6 px-6 py-4 bg-gray-100 dark:bg-zinc-400/5 rounded-lg relative">
           {chatMessages.length === 0 && (
@@ -445,9 +499,9 @@ export default function Analyze() {
             <Trash2 className="h-5 w-5" />
           </Button>
         </div>
-      </div>
+      </div>                                                                                                                                                                                                                                                     
 
-      <div className="flex flex-1 flex-col w-[100%]">
+      <div className="flex flex-1 overflow-auto flex-col w-[100%]">
         <div className="mb-4 flex justify-center gap-4 pt-8 px-4 space-x-2">
           <TabButton active={!showVisualisations} onClick={() => setShowVisualisations(false)}>
             <ArrowLeft />
@@ -464,13 +518,24 @@ export default function Analyze() {
         </div>
         {showVisualisations ? 
         <div className="px-4">
-            <div className="border flex flex-col items-center gap-8 justify-center p-8">
-              <div className="flex gap-4 items-center">
-                <div className="font-bold ">
-                  Graphs
-                </div>
+            <div className="flex flex-col items-center gap-8 justify-center p-8">
+              <div className="h-">
+                <PieChartDonutWithText totalNoOfFiles={files.length} chartData={chartData} />  
               </div>
-              <PieChartDonutWithText totalNoOfFiles={files.length} chartData={chartData} />
+              <div className="mb-4 flex space-x-2">
+                <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
+                  Summary
+                </TabButton>
+                <TabButton active={activeTab === "findings"} onClick={() => setActiveTab("findings")}>
+                  Key Findings
+                </TabButton>
+                <TabButton
+                  active={activeTab === "vulnerabilities"}
+                  onClick={() => setActiveTab("vulnerabilities")}
+                >
+                  Vulnerabilities
+                </TabButton>
+              </div>
             </div>   
         </div>  
         :
@@ -495,7 +560,7 @@ export default function Analyze() {
               </CardContent>
             </Card>
 
-            <div className="mb-4 flex space-x-2">
+            {activeFile && <div className="mb-4 flex space-x-2">
               <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
                 Summary
               </TabButton>
@@ -508,9 +573,9 @@ export default function Analyze() {
               >
                 Vulnerabilities
               </TabButton>
-            </div>
+            </div>}
 
-            {activeTab === "summary" && (
+            {activeFile && activeTab === "summary" && (
               <Card className="mb-4">
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -534,7 +599,7 @@ export default function Analyze() {
               </Card>
             )}
 
-            {activeTab === "findings" && (
+            {activeFile && activeTab === "findings" && (
               <Card className="mb-4">
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -583,7 +648,7 @@ export default function Analyze() {
               </Card>
             )}
 
-            {activeTab === "vulnerabilities" && (
+            {activeFile && activeTab === "vulnerabilities" && (
               <Card className="mb-4">
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -686,8 +751,14 @@ export default function Analyze() {
           </div>
         </div>
       }
+      {!activeFile && !showVisualisations && 
+        <div className="flex justify-center items-center gap-4 h-full text-center  font-mono text-gray-400/60">
+          <div>
+            <MousePointerClick />
+          </div>
+          Select a file above to fetch results!
+        </div>}
       </div>
-      
     </div>
   );
 }
@@ -756,7 +827,12 @@ function FileListCard({file,activeFile,onClick}:{file: {fileName: string, fileId
   return(
     <div onClick={()=>{
       // console.log("clicked",file.fileId[0])
-      onClick(file.fileId[0])}} className={`cursor-pointer truncate border rounded p-3 items-center  gap-4 flex ${activeFile == file.fileId && "border-white border-2"}`}>
+      if(activeFile==file.fileId){
+        onClick("")
+      }else{
+        onClick(file.fileId[0])
+      }
+      }} className={`cursor-pointer truncate border rounded p-3 items-center  gap-4 flex ${activeFile == file.fileId && "border-white border-2"}`}>
       <div>
         <File />
       </div>

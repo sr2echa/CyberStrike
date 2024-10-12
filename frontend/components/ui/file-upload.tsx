@@ -45,7 +45,7 @@ export const FileUpload = ({
   };
 
   const { getRootProps, isDragActive } = useDropzone({
-    multiple: false,
+    multiple: true,
     noClick: true,
     onDrop: handleFileChange,
     onDropRejected: (error) => {
@@ -62,6 +62,7 @@ export const FileUpload = ({
       >
         <input
           ref={fileInputRef}
+          multiple
           id="file-upload-handle"
           type="file"
           onChange={(e) => handleFileChange(Array.from(e.target.files || []))}
