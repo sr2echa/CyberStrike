@@ -20,6 +20,6 @@
 ---
 <samp>
 
-  built by [**sreecha**]() [**girish**]() [**akkhilesh**]() & [**toby**]() for Google GenAI Exchange
+  built by [**sreecha**]() [**girish**]() [**akkilesh**]() & [**toby**]() for Google GenAI Exchange
 
 </samp>
