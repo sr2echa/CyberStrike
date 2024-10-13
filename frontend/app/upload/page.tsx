@@ -6,9 +6,8 @@ import { Loader, Clock, GripVertical, Trash2 } from "lucide-react";
 import { Button, RainbowButton, FileUpload } from "@/components/ui";
 
 export default function Page() {
-  // dummy push
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -52,75 +51,47 @@ export default function Page() {
     };
   }, [isResizing]);
 
-  const handleFileUpload = (files: File[]) => {
-    setFile(files[0]);
-    console.log(files);
+  const handleFileUpload = (uploadedFiles: File[]) => {
+    setFiles((prevFiles) => [...prevFiles, ...uploadedFiles]);
+    console.log(uploadedFiles);
   };
 
-  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   if (e.target.files && !isLoading) {
-  //     setFile(e.target.files[0]);
-  //   }
-  // };
-
-  // const handleDragOver = (e: React.DragEvent) => {
-  //   e.preventDefault();
-  //   if (!isLoading) {
-  //     setIsDragging(true);
-  //   }
-  // };
-
-  // const handleDragLeave = () => {
-  //   setIsDragging(false);
-  // };
-
-  // const handleDrop = (e: React.DragEvent) => {
-  //   e.preventDefault();
-  //   setIsDragging(false);
-  //   if (e.dataTransfer.files && !isLoading) {
-  //     setFile(e.dataTransfer.files[0]);
-  //   }
-  // };
-
   const handleUpload = async () => {
-    if (file && !isLoading) {
+    if (files.length > 0 && !isLoading) {
       setIsLoading(true);
       try {
-        // Convert file to base64
-        const base64File = await convertToBase64(file);
-        console.log("Base64 file:", base64File);
-
-        // Make POST request
+        const filesData = await Promise.all(
+          files.map(async (file) => ({
+            file: await convertToBase64(file),
+            filename: file.name,
+          }))
+        );
+  
         const response = await fetch(backendUrl + "/upload", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            file: base64File,
-            filename: file.name,
-          }),
+          body: JSON.stringify({ files: filesData }),
         });
-
+  
         if (response.ok) {
           const data = await response.json();
-          if (data.id) {
-            // Store the uploaded file info
-            const newFile: UploadedFile = {
-              id: data.id,
+          if (data.ids && data.ids.length > 0) {
+            const newFiles: UploadedFile[] = files.map((file, index) => ({
+              id: data.ids[index],
               filename: file.name,
               timestamp: Date.now(),
-            };
-            const updatedFiles = [newFile, ...uploadedFiles.filter((f) => f.id !== data.id)].slice(
-              0,
-              10
-            );
+            }));
+            const updatedFiles = [...newFiles, ...uploadedFiles].slice(0, 10);
             setUploadedFiles(updatedFiles);
-            localStorage.setItem("uploadedFiles", JSON.stringify(updatedFiles));
-
-            router.push(`/analyze/${data.id}`);
+            console.log(uploadedFiles)
+            // localStorage.setItem("uploadedFiles", JSON.stringify(updatedFiles));
+            await localStorage.setItem("responseFromBackend","")
+            await localStorage.setItem("responseFromBackend", JSON.stringify(data))
+            router.push(`/analyze2/${data.user}`);
           } else {
-            console.error("Response does not contain an id");
+            console.error("Response does not contain ids");
           }
         } else {
           console.error("Upload failed");
@@ -129,6 +100,7 @@ export default function Page() {
         console.error("Error during upload:", error);
       } finally {
         setIsLoading(false);
+        setFiles([]);
       }
     }
   };
@@ -180,41 +152,41 @@ export default function Page() {
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-72px)] bg-white dark:bg-[#0a0a0a] text-black dark:text-white">
-      {/* Main content */}
       <div className="flex-1 flex flex-col md:overflow-hidden">
         <div className="flex-grow overflow-y-auto md:overflow-y-hidden">
           <div className="min-h-screen p-4 flex flex-col justify-center items-center">
-            {/* <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">
-              Upload Security Audit File
-            </h1> */}
             <div className="w-full max-w-md mx-auto">
               <div className="w-full max-w-4xl mx-auto min-h-96 border-dashed border-4 bg-white dark:bg-[#0a0a0a] border-neutral-200 dark:border-neutral-800 rounded-lg">
                 <FileUpload onChange={handleFileUpload} />
               </div>
+              {/* <div className="mt-4">
+                {files.map((file, index) => (
+                  <p key={index} className="text-sm">{file.name}</p>
+                ))}
+              </div> */}
               <RainbowButton
                 className={`w-full mt-8 transition-colors p-4 rounded-xl flex items-center justify-center ${
-                  isLoading || !file
+                  isLoading || files.length === 0
                     ? "border text-gray-600 cursor-not-allowed"
                     : "bg-black text-white hover:bg-gray-800"
                 }`}
                 onClick={handleUpload}
-                disabled={!file || isLoading}
+                disabled={files.length === 0 || isLoading}
               >
                 {isLoading ? (
                   <>
                     <Loader className="w-4 h-4 mr-2 animate-spin" />
                     <span>Processing...</span>
                   </>
-                ) : file ? (
-                  "Analyze Security Audit"
+                ) : files.length > 0 ? (
+                  `Analyze ${files.length} Security Audit${files.length > 1 ? 's' : ''}`
                 ) : (
-                  "Upload File to Begin"
+                  "Upload Files to Begin"
                 )}
               </RainbowButton>
             </div>
           </div>
 
-          {/* Recent Files (Mobile View) */}
           <div className="md:hidden bg-gray-100 dark:bg-[#0a0a0a] border-t border-gray-200 dark:border-gray-700">
             <div className="sticky top-0 bg-gray-100 dark:bg-[#0a0a0a] z-10">
               <div className="flex items-center justify-between p-4">
@@ -254,9 +226,9 @@ export default function Page() {
                             hour12: true,
                           })}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                        {/* <p className="text-xs text-gray-500 dark:text-gray-500">
                           ID: {uploadedFile.id.slice(0, 8)}...
-                        </p>
+                        </p> */}
                       </div>
                     </div>
                   ))}
@@ -267,13 +239,11 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Resizer (visible only on desktop) */}
       <div
         className="hidden md:block w-1 cursor-col-resize bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
         onMouseDown={() => setIsResizing(true)}
       />
 
-      {/* Sidebar (Desktop View) */}
       <div
         ref={sidebarRef}
         style={{ width: `${sidebarWidth}px` }}
@@ -317,9 +287,9 @@ export default function Page() {
                         hour12: true,
                       })}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                    {/* <p className="text-xs text-gray-500 dark:text-gray-500">
                       ID: {uploadedFile.id.slice(0, 8)}...
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               ))}
