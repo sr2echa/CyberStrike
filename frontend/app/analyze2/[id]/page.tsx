@@ -155,7 +155,7 @@ export default function Analyze() {
     if(allFileIds.length>0){
       fetchGraphData()
     }
-  },[allFileIds,files])
+  },[])
 
   useEffect(() => {
 
