@@ -4,7 +4,7 @@ import re
 import json
 import base64
 import datetime
-import openai
+import uuid
 import logging
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -40,20 +40,6 @@ app.add_middleware(
     allow_credentials=True
 )
 
-openai_llm = None
-try:
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
-    if openai_api_key:
-        openai_llm = OpenAI(api_key=openai_api_key)
-        logger.info("Using OpenAI LLM")
-    else:
-        logger.warning("Couldn't find OpenAI API key.")
-except Exception as e:
-    logger.error(f"Error initializing OpenAI LLM: {e}")
-
-if not openai_llm:
-    raise ValueError("Failed to initialize OpenAI LLM. Please check your OpenAI API key.")
-
 gemini_llm = None
 try:
     google_api_key = os.environ.get("GOOGLE_API_KEY")
@@ -83,7 +69,8 @@ class UploadRequest(BaseModel):
 
 class UploadResponse(BaseModel):
     status: str
-    ids: List[str]
+    ids: List[Dict[str, str]]
+    user: str
 
 class ChatMessage(BaseModel):
     role: str
@@ -116,6 +103,12 @@ class SummarizeRequest(BaseModel):
 class SummarizeResponse(BaseModel):
     summary: str
 
+class CategoriesRequest(BaseModel):
+    file_list: List[str]
+
+class CategoriesResponse(BaseModel):
+    categories: Dict[str, List[str]]
+    
 def clean_llm_response(response: str) -> str:
     """Remove Markdown code block syntax and any additional text from the LLM response."""
     cleaned = re.sub(r'^```json\s*', '', response.strip())
@@ -133,10 +126,9 @@ def get_document_info(file_id: str) -> Dict[str, Any]:
         with open(info_path, 'r') as f:
             doc_info = json.load(f)
    
-        if 'full_text' in doc_info:
+        if 'full_text' in doc_info and 'nodes' in doc_info:
             document = Document(text=doc_info['full_text'])
-            splitter = SentenceSplitter(chunk_size=1024)
-            nodes = splitter.get_nodes_from_documents([document])
+            nodes = [Document.from_dict(node) for node in doc_info['nodes']]
             doc_info['index'] = VectorStoreIndex(nodes)
         
         document_store[file_id] = doc_info
@@ -157,9 +149,11 @@ async def upload_documents(upload_request: UploadRequest, background_tasks: Back
                 f.write(file_content)
 
             background_tasks.add_task(process_document, file_path, file_hash, file_upload.filename)
-            file_ids.append(file_hash)
+            file_ids.append({file_upload.filename: file_hash})
         
-        return UploadResponse(status="success", ids=file_ids)
+        user_hash = uuid.uuid4().hex  
+
+        return UploadResponse(status="success", ids=file_ids, user=user_hash)
     except Exception as e:
         logger.error(f"Error processing upload: {e}")
         raise HTTPException(status_code=500, detail="Error processing upload")
@@ -181,7 +175,6 @@ class DocumentProcessor:
         self.summary_index = SummaryIndex(self.nodes)
         self.vector_index = VectorStoreIndex(self.nodes)
         
-        # Create KnowledgeGraphIndex
         storage_context = StorageContext.from_defaults()
         self.kg_index = KnowledgeGraphIndex(
             nodes=self.nodes,
@@ -263,6 +256,7 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
         doc_info = {
             "query_engine": query_engine_builder.query_engine,
             "full_text": processor.full_text,
+            "nodes": [node.to_dict() for node in processor.nodes],  # Convert nodes to dict
             "filename": original_filename,
             "size": file_size,
             "upload_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -273,14 +267,14 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
         }
         
         document_store[file_hash] = doc_info
-        info_to_save = {k: v for k, v in doc_info.items() if k not in ['query_engine', 'full_text']}
+        info_to_save = {k: v for k, v in doc_info.items() if k not in ['query_engine']}
         info_path = os.path.join(UPLOADS_DIR, f"{file_hash}_info.json")
         with open(info_path, "w") as f:
             json.dump(info_to_save, f, default=str)
 
     except Exception as e:
         logger.error(f"Error processing document: {e}")
-
+        
 def get_available_documents():
     documents = {}
     for filename in os.listdir(UPLOADS_DIR):
@@ -291,82 +285,78 @@ def get_available_documents():
             documents[file_id] = doc_info
     return documents
 
+import openai
 def summarize_for_tool(summary_content):
     """
-    Generates a compact summary of the provided content using OpenAI's API.
+    Generates a compact summary of the provided content using LLM's API.
 
     Parameters:
-        api_key (str): Your OpenAI API key.
+        api_key (str): Your LLM API key.
         summary_content (str): The content to summarize.
 
     Returns:
         str: A concise summary of the content, limited to 100 words.
     """
-    # Construct the prompt for summarization
     prompt = f"Please summarize the following content in no more than 100 words for easy tool selection:\n\n{summary_content}"
 
     try:
-        # Call the OpenAI API for summarization
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant for summarizing content."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=150,  # Allow some buffer for the response
+            max_tokens=150, 
             temperature=0.1
         )
 
-        # Extract the summary from the response
         summary = response['choices'][0]['message']['content'].strip()
         return summary
 
     except Exception as e:
         return f"An error occurred: {str(e)}"
-@app.post("/chat")
-async def chat(chat_request: ChatRequest):
-    try:
-        available_documents = get_available_documents()
+    
         
-        if not available_documents:
-            return {"response": "No documents are currently available in the system. Please upload some documents first."}
+def process_nodes():
+    available_documents = get_available_documents()    
+    if not available_documents:
+        return {"response": "No documents are currently available in the system. Please upload some documents first."}
 
-        docs_list = {}
-        vector_index = {}
-        summary_index = {}
-        summary_to_identify = {}
-        agents = {}
-        query_engines = {}
-        all_nodes = []
-        
-        titles = [doc_info["filename"] for doc_info in available_documents.values()]
-        
-        for doc_name in titles:
-            file_id = next(id for id, info in available_documents.items() if info["filename"] == doc_name)
-            doc_info = get_document_info(file_id)
+    docs_list = {}
+    vector_index = {}
+    summary_index = {}
+    summary_to_identify = {}
+    agents = {}
+    query_engines = {}
+    all_nodes = []
+       
+    titles = [doc_info["filename"] for doc_info in available_documents.values()]
+      
+    for doc_name in titles:
+        file_id = next(id for id, info in available_documents.items() if info["filename"] == doc_name)
+        doc_info = get_document_info(file_id)
+         
+        if 'full_text' not in doc_info or 'nodes' not in doc_info:
+            logger.warning(f"Full text or nodes not found for document {doc_name}. Skipping...")
+            continue
             
-            if 'full_text' not in doc_info:
-                logger.warning(f"Full text not found for document {doc_name}. Skipping...")
-                continue
+        document = Document(text=doc_info['full_text'])
+        nodes = [Document.from_dict(node) for node in doc_info['nodes']]
             
-            document = Document(text=doc_info['full_text'])
-            splitter = SentenceSplitter(chunk_size=1024)
-            nodes = splitter.get_nodes_from_documents([document])
+        doc_name = doc_name[:-4]  # Remove .pdf extension
+        docs_list[doc_name] = DocumentProcessor(os.path.join(UPLOADS_DIR, f"{file_id}.pdf"))
+        docs_list[doc_name].full_text = doc_info['full_text']
+        docs_list[doc_name].nodes = nodes
+        all_nodes.extend(nodes)
             
-            doc_name = doc_name[:-4]  # Remove .pdf extension
-            docs_list[doc_name] = DocumentProcessor(os.path.join(UPLOADS_DIR, f"{file_id}.pdf"))
-            docs_list[doc_name].full_text = doc_info['full_text']
-            docs_list[doc_name].nodes = nodes
-            all_nodes.extend(nodes)
+        vector_index[doc_name] = VectorStoreIndex(nodes)
+        summary_index[doc_name] = SummaryIndex(nodes)
+        node_ids = [node_id for value in summary_index[doc_name].ref_doc_info.values() for node_id in value.node_ids[:4]]
+        summary_to_identify[doc_name] = summarize_for_tool(summary_index[doc_name].docstore.get_nodes(node_ids))
             
-            vector_index[doc_name] = VectorStoreIndex(nodes)
-            summary_index[doc_name] = SummaryIndex(nodes)
-            node_ids = [node_id for value in summary_index[doc_name].ref_doc_info.values() for node_id in value.node_ids[:4]]
-            summary_to_identify[doc_name] = summarize_for_tool(summary_index[doc_name].docstore.get_nodes(node_ids))
-            
-            vector_query_engine = vector_index[doc_name].as_query_engine(llm=Settings.llm)
-            summary_query_engine = summary_index[doc_name].as_query_engine(llm=Settings.llm)
-            query_engine_tools = [
+        vector_query_engine = vector_index[doc_name].as_query_engine(llm=Settings.llm)
+        summary_query_engine = summary_index[doc_name].as_query_engine(llm=Settings.llm)
+        query_engine_tools = [
                 QueryEngineTool(
                     query_engine=vector_query_engine,
                     metadata=ToolMetadata(
@@ -389,8 +379,8 @@ async def chat(chat_request: ChatRequest):
                     ),
                 ),
             ]   
-            function_llm = OpenAI(model="gpt-4o-mini")
-            agent = OpenAIAgent.from_tools(
+        function_llm = OpenAI(model="gpt-4o-mini")
+        agent = OpenAIAgent.from_tools(
                 query_engine_tools,
                 llm=function_llm,
                 verbose=True,
@@ -400,33 +390,32 @@ async def chat(chat_request: ChatRequest):
         You must ALWAYS use at least one of the tools provided when answering a question; do NOT rely on prior knowledge.\
         """,
             )
-            agents[doc_name] = agent
-            query_engines[doc_name] = vector_index[doc_name].as_query_engine(
+        agents[doc_name] = agent
+        query_engines[doc_name] = vector_index[doc_name].as_query_engine(
                 similarity_top_k=3
             )
         
-        # Rest of the function remains the same
-        all_tools = []
-        for docs in titles:
-            docs = docs[:-4]
-            summary = (
+    all_tools = []
+    for docs in titles:
+        docs = docs[:-4]
+        summary = (
                 f"This content contains cybersecurity audits about {docs}. Use"
                 f" this tool if you want to answer any questions about {summary_to_identify[docs]}.\n"
             )
-            doc_tool = QueryEngineTool(
+        doc_tool = QueryEngineTool(
                 query_engine=agents[docs],
                 metadata=ToolMetadata(
                     name=f"tool_{docs}",
                     description=summary,
                 ),
             )
-            all_tools.append(doc_tool)
+        all_tools.append(doc_tool)
         
-        obj_index = ObjectIndex.from_objects(
+    obj_index = ObjectIndex.from_objects(
             all_tools,
             index_cls=VectorStoreIndex,
         )
-        top_agent = OpenAIAgent.from_tools(
+    top_agent = OpenAIAgent.from_tools(
             tool_retriever=obj_index.as_retriever(similarity_top_k=3),
             system_prompt=""" \
         You are Fischer, a knowledgeable and friendly AI assistant from the CyberStrike AI Audit Management Suite. 
@@ -437,8 +426,23 @@ async def chat(chat_request: ChatRequest):
         Please always use the tools provided to answer a question. Do not rely on prior knowledge.
         """,
             verbose=True,
-        )
+        )  
+    top_agent_cat = OpenAIAgent.from_tools(
+        tool_retriever=obj_index.as_retriever(similarity_top_k=4),
+        system_prompt=""" \
+    You are an agent designed to answer queries about a set of given cyber security audits of different types.
+    Please always use the tools provided to answer a question. Do not rely on prior knowledge.\
+
+    """,
+        verbose=True,
+    )
+    return top_agent, all_nodes, top_agent_cat
+
+@app.post("/chat")
+async def chat(chat_request: ChatRequest):
+    try:
         
+        top_agent,all_nodes,_=process_nodes()
         base_index = VectorStoreIndex(all_nodes)
         base_query_engine = base_index.as_query_engine(similarity_top_k=4)
         
@@ -459,6 +463,162 @@ async def chat(chat_request: ChatRequest):
     except Exception as e:
         logger.error(f"Error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
+@app.post('/graph')
+async def get_vulnerabilities_graph():
+    top_agent, _, _ = process_nodes()
+    prompt = """
+    Analyze the vulnerabilities from multiple documents or systems and generate an aggregated report. For each vulnerability, do the following:
+
+        1. Provide a brief description of the vulnerability.
+        2. Indicate the frameworks it is associated with (e.g., OWASP, NIST, CWE, CVE, HIPAA, SEBI, etc.).
+        3. Include the CVE (if applicable).
+        4. Assign a CVSS score from 0 to 10, explaining the criticality based on its base metrics (Attack Vector, Complexity, Privileges, etc.).
+        5. Provide the EPSS score (if available) to estimate the likelihood of exploitation.
+        6. Classify the vulnerability under the MITRE ATT&CK framework (tactic and technique).
+        7. Indicate how often this vulnerability appears across different files/systems.
+        8. Suggest a brief mitigation strategy.
+
+        Your response must be in valid JSON format with the following structure:
+        {
+            "summary": {
+                "total_files_analyzed": <total number of files>,
+                "total_vulnerabilities_detected": <total number of vulnerabilities>,
+                "vulnerabilities_by_framework": {
+                    "OWASP": <count>,
+                    "NIST": <count>,
+                    "CWE": <count>,
+                    "CVE": <count>,
+                    "CIS Controls": <count>,
+                    "HIPAA": <count>,
+                    "SEBI": <count>,
+                    "RBI": <count>
+                },
+                "vulnerabilities_by_cvss_rating": {
+                    "critical_9_10": <count>,
+                    "high_7_8.9": <count>,
+                    "medium_4_6.9": <count>,
+                    "low_0.1_3.9": <count>
+                },
+                "vulnerabilities_by_mitre_tactic": {
+                    "Execution": <count>,
+                    "Privilege Escalation": <count>,
+                    "Persistence": <count>,
+                    "Defense Evasion": <count>,
+                    "Initial Access": <count>,
+                    "Impact": <count>
+                },
+                "top_vulnerabilities": [
+                    {
+                        "description": "<Vulnerability description here>",
+                        "framework": ["<Frameworks here (e.g., OWASP, CWE, NIST)>"],
+                        "CVE": "<CVE ID>",
+                        "CVSS": <CVSS score>,
+                        "EPSS": <EPSS score (if applicable)>,
+                        "tactic": "<MITRE tactic>",
+                        "technique": "<MITRE technique>",
+                        "occurrences": <number of times this vulnerability appears>,
+                        "criticality": <criticality score from 1-10>,
+                        "reasoning": "<Reasoning for criticality score>",
+                        "mitigation": "<Mitigation strategy>"
+                    },
+                    
+                ]
+            },
+            "detailed_vulnerabilities_by_cvss_rating": [
+                {
+                    "cvss_rating": "critical_9_10",
+                    "total_vulnerabilities": <count>,
+                    "common_vulnerabilities": [
+                        {
+                            "description": "<Description>",
+                            "framework": ["<Frameworks>"],
+                            "CVE": "<CVE ID>",
+                            "CVSS": <CVSS score>,
+                            "EPSS": <EPSS score>,
+                            "tactic": "<MITRE tactic>",
+                            "technique": "<MITRE technique>",
+                            "occurrences": <count>,
+                            "mitigation": "<Mitigation strategy>"
+                        }
+                    ]
+                },
+                
+            ]
+        }
+        Only return valid JSON without additional text or explanations."""
+    
+    response = top_agent.chat(prompt)
+    
+    try:
+        response_str = str(response)
+        logger.info(f"LLM Response: {response_str}")
+        json_str = re.search(r'```json\s*(.*?)\s*```', response_str, re.DOTALL)
+        if json_str:
+            json_data = json.loads(json_str.group(1))
+        else:
+            json_data = json.loads(response_str)
+        formatted_response = {
+            "summary": json_data["summary"],
+            "detailed_vulnerabilities_by_cvss_rating": json_data["detailed_vulnerabilities_by_cvss_rating"]
+        }
+        
+        return JSONResponse(content=formatted_response)
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing JSON response: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error parsing JSON response: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error processing vulnerabilities graph: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing vulnerabilities graph: {str(e)}")
+
+@app.post('/categories')
+async def get_categories(categories_request: CategoriesRequest):
+    _,_,top_agent_cat=process_nodes()
+    file_list = ', '.join(categories_request.file_list)
+    prompt = f"""
+        Classify the following file names into one of these categories:
+        1. Compliance Audit
+        2. Vulnerability Assessment
+        3. Penetration Testing
+        4. API Security Audit
+        5. Incident Response Audit
+        6. Security Policy Review
+        7. Network Security Audit
+
+        File Names: "{file_list}"
+
+        Provide the entire list in this format COMPULSORILY, one file can ONLY belong to one category of audits, every file must be put into one category at least:
+
+        Compliance Audit:["file_name_1","file_name_2"]
+        Vulnerability Assessment:["file_name_3","file_name_4"]
+        Penetration Testing:["file_name_5","file_name_6",file_name_7]
+        API Security Audit:["file_name_8","file_name_9"]
+        Incident Response Audit:["file_name_10","file_name_11"]
+        Security Policy Review:["file_name_12","file_name_13","file_name_14"]
+        Network Security Audit:["file_name_15","file_name_16"] 
+
+        """
+        
+    response = top_agent_cat.chat(prompt)
+    pattern = r'(\d+\.\s*[\w\s]+):\s*(\[.*?\])'
+    matches = re.findall(pattern, str(response))
+
+
+    categories = {
+        "Compliance_Audit": [],
+        "Vulnerability_Assessment": [],
+        "Penetration_Testing": [],
+        "API_Security_Audit": [],
+        "Incident_Response_Audit": [],
+        "Security_Policy_Review": [],
+        "Network_Security_Audit": []
+    }
+
+    for match in matches:
+        category = match[0].split('.')[1].strip()
+        files = json.loads(match[1])
+        categories[category] = files
+
+    return CategoriesResponse(categories=categories)
 
 @app.post("/fileinfo/{file_id}", response_model=FileInfoResponse)
 async def get_file_info(file_id: str):
@@ -466,10 +626,7 @@ async def get_file_info(file_id: str):
     if not doc_info:
         raise HTTPException(status_code=404, detail="File not found")
     
-    # Convert file size to MB
     file_size_mb = f"{doc_info['size'] / (1024 * 1024):.1f} MB"
-    
-    # Extract date from last_modified
     last_edited = doc_info["last_modified"].split()[0]
     
     return FileInfoResponse(
@@ -477,8 +634,8 @@ async def get_file_info(file_id: str):
         file_size=file_size_mb,
         last_edited=last_edited,
         page_count=doc_info["page_count"],
-        author="Security Team",  # You may need to add this field to your document processing
-        created_at=doc_info["created_at"].split()[0]  # Extract date only
+        author="Security Team",  
+        created_at=doc_info["created_at"].split()[0]  
     )
 
 
@@ -703,7 +860,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     try:
-        response = openai_llm.complete("Say 'Gemini is working!'")
+        response = gemini_llm.complete("Say 'Gemini is working!'")
         if "Gemini is working" in response.text:
             return {"status": "healthy", "llm": "Gemini"}
         else:
