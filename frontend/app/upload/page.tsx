@@ -152,11 +152,11 @@ export default function Page() {
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-72px)] bg-white dark:bg-[#0a0a0a] text-black dark:text-white">
-      <div className="flex-1 flex flex-col md:overflow-hidden">
-        <div className="flex-grow overflow-y-auto md:overflow-y-hidden">
+      <div className="flex-1  flex flex-col md:overflow-hidden">
+        <div className="flex-grow overflow-y-auto ">
           <div className="min-h-screen p-4 flex flex-col justify-center items-center">
             <div className="w-full max-w-md mx-auto">
-              <div className="w-full max-w-4xl mx-auto min-h-96 border-dashed border-4 bg-white dark:bg-[#0a0a0a] border-neutral-200 dark:border-neutral-800 rounded-lg">
+              <div className="w-full max-w-4xl mx-auto min-h-96 overflow-auto border-dashed border-4 bg-white dark:bg-[#0a0a0a] border-neutral-200 dark:border-neutral-800 rounded-lg">
                 <FileUpload onChange={handleFileUpload} />
               </div>
               {/* <div className="mt-4">

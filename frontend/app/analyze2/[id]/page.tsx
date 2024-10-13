@@ -519,22 +519,22 @@ export default function Analyze() {
         {showVisualisations ? 
         <div className="px-4">
             <div className="flex flex-col items-center gap-8 justify-center p-8">
-              <div className="h-">
+              <div className=" overflow-auto">
                 <PieChartDonutWithText totalNoOfFiles={files.length} chartData={chartData} />  
               </div>
-              <div className="mb-4 flex space-x-2">
-                <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
-                  Summary
-                </TabButton>
-                <TabButton active={activeTab === "findings"} onClick={() => setActiveTab("findings")}>
-                  Key Findings
-                </TabButton>
-                <TabButton
+              <div className=" w-[47%] justify-center absolute bottom-5 flex space-x-2">
+                <GraphTabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
+                  Categories
+                </GraphTabButton>
+                <GraphTabButton active={activeTab === "findings"} onClick={() => setActiveTab("findings")}>
+                  Findings
+                </GraphTabButton>
+                <GraphTabButton
                   active={activeTab === "vulnerabilities"}
                   onClick={() => setActiveTab("vulnerabilities")}
                 >
                   Vulnerabilities
-                </TabButton>
+                </GraphTabButton>
               </div>
             </div>   
         </div>  
@@ -815,6 +815,29 @@ function TabButton({
         active
           ? "bg-black text-white dark:bg-white dark:text-black"
           : "bg-transparent text-black hover:bg-gray-300  dark:text-white dark:hover:bg-gray-600/50"
+      }`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function GraphTabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      className={`px-4 py-2 rounded-lg transition-colors ${
+        active
+          ? " scale-110 duration-300"
+          : "bg-transparent duration-300 text-gray-500 "
       }`}
       onClick={onClick}
     >
