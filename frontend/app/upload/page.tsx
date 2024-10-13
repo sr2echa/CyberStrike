@@ -13,9 +13,9 @@ export default function Page() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== "undefined") {
-      return Math.max(window.innerWidth / 3, 256);
+      return Math.max(window.innerWidth * 0.3, 500);
     }
-    return 256;
+    return 500;
   });
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
@@ -66,7 +66,7 @@ export default function Page() {
             filename: file.name,
           }))
         );
-  
+
         const response = await fetch(backendUrl + "/upload", {
           method: "POST",
           headers: {
@@ -74,7 +74,7 @@ export default function Page() {
           },
           body: JSON.stringify({ files: filesData }),
         });
-  
+
         if (response.ok) {
           const data = await response.json();
           if (data.ids && data.ids.length > 0) {
@@ -85,10 +85,10 @@ export default function Page() {
             }));
             const updatedFiles = [...newFiles, ...uploadedFiles].slice(0, 10);
             setUploadedFiles(updatedFiles);
-            console.log(uploadedFiles)
+            console.log(uploadedFiles);
             // localStorage.setItem("uploadedFiles", JSON.stringify(updatedFiles));
-            await localStorage.setItem("responseFromBackend","")
-            await localStorage.setItem("responseFromBackend", JSON.stringify(data))
+            await localStorage.setItem("responseFromBackend", "");
+            await localStorage.setItem("responseFromBackend", JSON.stringify(data));
             router.push(`/analyze2/${data.user}`);
           } else {
             console.error("Response does not contain ids");
@@ -179,7 +179,7 @@ export default function Page() {
                     <span>Processing...</span>
                   </>
                 ) : files.length > 0 ? (
-                  `Analyze ${files.length} Security Audit${files.length > 1 ? 's' : ''}`
+                  `Analyze ${files.length} Security Audit${files.length > 1 ? "s" : ""}`
                 ) : (
                   "Upload Files to Begin"
                 )}
