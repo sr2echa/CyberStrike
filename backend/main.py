@@ -19,7 +19,7 @@ from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.query_engine.router_query_engine import RouterQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
-from llama_index.core.indices.knowledge_graph.base import KnowledgeGraphIndex
+# from llama_index.core.indices.knowledge_graph.base import KnowledgeGraphIndex
 from llama_index.core import StorageContext
 from llama_index.core.objects import ObjectIndex
 from llama_index.agent.openai import OpenAIAgent
@@ -44,7 +44,7 @@ gemini_llm = None
 try:
     google_api_key = os.environ.get("GOOGLE_API_KEY")
     if google_api_key:
-        gemini_llm = Gemini(api_key=google_api_key)
+        gemini_llm = Gemini(api_key=google_api_key,model='models/gemini-1.5-flash')
         logger.info("Using Gemini LLM")
     else:
         logger.warning("Couldn't find Google API key.")
@@ -165,7 +165,7 @@ class DocumentProcessor:
         self.nodes = None
         self.summary_index = None
         self.vector_index = None
-        self.kg_index = None
+        #self.kg_index = None
 
     def process(self):
         self.full_text = pymupdf4llm.to_markdown(self.file_path)
@@ -175,21 +175,21 @@ class DocumentProcessor:
         self.summary_index = SummaryIndex(self.nodes)
         self.vector_index = VectorStoreIndex(self.nodes)
         
-        storage_context = StorageContext.from_defaults()
-        self.kg_index = KnowledgeGraphIndex(
-            nodes=self.nodes,
-            storage_context=storage_context,
-            max_triplets_per_chunk=10,
-            include_embeddings=False,
-            show_progress=True,
-        )
-        self.kg_index._build_index_from_nodes(self.nodes)
+        # storage_context = StorageContext.from_defaults()
+        # self.kg_index = KnowledgeGraphIndex(
+        #     nodes=self.nodes,
+        #     storage_context=storage_context,
+        #     max_triplets_per_chunk=10,
+        #     include_embeddings=False,
+        #     show_progress=True,
+        # )
+        # self.kg_index._build_index_from_nodes(self.nodes)
         
 class QueryEngineBuilder:
-    def __init__(self, summary_index: SummaryIndex, vector_index: VectorStoreIndex, kg_index: KnowledgeGraphIndex):
+    def __init__(self, summary_index: SummaryIndex, vector_index: VectorStoreIndex): #, kg_index: KnowledgeGraphIndex
         self.summary_index = summary_index
         self.vector_index = vector_index
-        self.kg_index = kg_index
+        #self.kg_index = kg_index
         self.query_engine = None
 
     def build_query_engine(self):
@@ -198,14 +198,14 @@ class QueryEngineBuilder:
             use_async=True,
         )
         vector_query_engine = self.vector_index.as_query_engine()
-        kg_query_engine = self.kg_index.as_query_engine(
-            include_text=True,
-            retriever_mode="keyword",
-            response_mode="tree_summarize",
-            embedding_mode="hybrid",
-            similarity_top_k=3,
-            explore_global_knowledge=True,
-        )
+        # kg_query_engine = self.kg_index.as_query_engine(
+        #     include_text=True,
+        #     retriever_mode="keyword",
+        #     response_mode="tree_summarize",
+        #     embedding_mode="hybrid",
+        #     similarity_top_k=3,
+        #     explore_global_knowledge=True,
+        # )
 
         summary_tool = QueryEngineTool.from_defaults(
             query_engine=summary_query_engine,
@@ -217,14 +217,14 @@ class QueryEngineBuilder:
             description="Useful for retrieving specific context from the Document."
         )
 
-        kg_tool = QueryEngineTool.from_defaults(
-            query_engine=kg_query_engine,
-            description="Useful for understanding relationships and connections within the Document."
-        )
+        # kg_tool = QueryEngineTool.from_defaults(
+        #     query_engine=kg_query_engine,
+        #     description="Useful for understanding relationships and connections within the Document."
+        # )
 
         self.query_engine = RouterQueryEngine(
             selector=LLMSingleSelector.from_defaults(),
-            query_engine_tools=[summary_tool, vector_tool, kg_tool],
+            query_engine_tools=[summary_tool, vector_tool], #, kg_tool
             verbose=True
         )
 
@@ -250,7 +250,7 @@ async def process_document(file_path: str, file_hash: str, original_filename: st
         processor = DocumentProcessor(file_path)
         processor.process()
         
-        query_engine_builder = QueryEngineBuilder(processor.summary_index, processor.vector_index, processor.kg_index)
+        query_engine_builder = QueryEngineBuilder(processor.summary_index, processor.vector_index) #, processor.kg_index
         query_engine_builder.build_query_engine()
         
         doc_info = {
@@ -354,8 +354,8 @@ def process_nodes():
         node_ids = [node_id for value in summary_index[doc_name].ref_doc_info.values() for node_id in value.node_ids[:4]]
         summary_to_identify[doc_name] = summarize_for_tool(summary_index[doc_name].docstore.get_nodes(node_ids))
             
-        vector_query_engine = vector_index[doc_name].as_query_engine(llm=Settings.llm)
-        summary_query_engine = summary_index[doc_name].as_query_engine(llm=Settings.llm)
+        vector_query_engine = vector_index[doc_name].as_query_engine(llm=gemini_llm)
+        summary_query_engine = summary_index[doc_name].as_query_engine(llm=gemini_llm)
         query_engine_tools = [
                 QueryEngineTool(
                     query_engine=vector_query_engine,
@@ -396,8 +396,10 @@ def process_nodes():
             )
         
     all_tools = []
+    n=0
     for docs in titles:
         docs = docs[:-4]
+        n +=1
         summary = (
                 f"This content contains cybersecurity audits about {docs}. Use"
                 f" this tool if you want to answer any questions about {summary_to_identify[docs]}.\n"
@@ -405,7 +407,7 @@ def process_nodes():
         doc_tool = QueryEngineTool(
                 query_engine=agents[docs],
                 metadata=ToolMetadata(
-                    name=f"tool_{docs}",
+                    name=f"tool_{re.sub(r'[^a-zA-Z0-9_-]', '_', docs)}",
                     description=summary,
                 ),
             )
@@ -416,23 +418,22 @@ def process_nodes():
             index_cls=VectorStoreIndex,
         )
     top_agent = OpenAIAgent.from_tools(
-            tool_retriever=obj_index.as_retriever(similarity_top_k=3),
-            system_prompt=""" \
-        You are Fischer, a knowledgeable and friendly AI assistant from the CyberStrike AI Audit Management Suite. 
-        Your primary role is to assist users in navigating cybersecurity audit processes, providing insights, and 
-        enhancing the overall quality of audit reports. Emphasize your expertise in risk assessments, compliance, 
-        vulnerability analysis, and remediation recommendations. Be personable, approachable, and solution-oriented.
+            tool_retriever=obj_index.as_retriever(similarity_top_k=n),
+            system_prompt=""" 
+                You are Fischer, a knowledgeable and friendly AI assistant from the CyberStrike AI Audit Management Suite. 
+                Your primary role is to assist users in navigating cybersecurity audit processes, providing insights, and 
+                enhancing the overall quality of audit reports. Emphasize your expertise in risk assessments, compliance, 
+                vulnerability analysis, and remediation recommendations. Be personable, approachable, and solution-oriented.
 
-        Please always use the tools provided to answer a question. Do not rely on prior knowledge.
+                Please always use the tools provided to answer a question. Do not rely on prior knowledge.
         """,
             verbose=True,
         )  
     top_agent_cat = OpenAIAgent.from_tools(
         tool_retriever=obj_index.as_retriever(similarity_top_k=4),
-        system_prompt=""" \
-    You are an agent designed to answer queries about a set of given cyber security audits of different types.
-    Please always use the tools provided to answer a question. Do not rely on prior knowledge.\
-
+        system_prompt=""" 
+            You are an agent designed to answer queries about a set of given cyber security audits of different types.
+            Please always use the tools provided to answer a question. Do not rely on prior knowledge.
     """,
         verbose=True,
     )
@@ -458,117 +459,70 @@ async def chat(chat_request: ChatRequest):
 
         Respond to the user's query using information from the documents:
         """)
-        
+        logger.info(f"LLM Response: {response}")
+        res = clean_llm_response(str(response))
         return {"response": str(response)}
     except Exception as e:
         logger.error(f"Error in chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
+    
 @app.post('/graph')
 async def get_vulnerabilities_graph():
     top_agent, _, _ = process_nodes()
     prompt = """
-    Analyze the vulnerabilities from multiple documents or systems and generate an aggregated report. For each vulnerability, do the following:
+    Analyze the following documents to infer a list of vulnerabilities based on cybersecurity guidelines such as OWASP and NIST.
 
-        1. Provide a brief description of the vulnerability.
-        2. Indicate the frameworks it is associated with (e.g., OWASP, NIST, CWE, CVE, HIPAA, SEBI, etc.).
-        3. Include the CVE (if applicable).
-        4. Assign a CVSS score from 0 to 10, explaining the criticality based on its base metrics (Attack Vector, Complexity, Privileges, etc.).
-        5. Provide the EPSS score (if available) to estimate the likelihood of exploitation.
-        6. Classify the vulnerability under the MITRE ATT&CK framework (tactic and technique).
-        7. Indicate how often this vulnerability appears across different files/systems.
-        8. Suggest a brief mitigation strategy.
+    Return the results ONLY IN THIS JSON format using the following structure:
 
-        Your response must be in valid JSON format with the following structure:
-        {
-            "summary": {
-                "total_files_analyzed": <total number of files>,
-                "total_vulnerabilities_detected": <total number of vulnerabilities>,
-                "vulnerabilities_by_framework": {
-                    "OWASP": <count>,
-                    "NIST": <count>,
-                    "CWE": <count>,
-                    "CVE": <count>,
-                    "CIS Controls": <count>,
-                    "HIPAA": <count>,
-                    "SEBI": <count>,
-                    "RBI": <count>
-                },
-                "vulnerabilities_by_cvss_rating": {
-                    "critical_9_10": <count>,
-                    "high_7_8.9": <count>,
-                    "medium_4_6.9": <count>,
-                    "low_0.1_3.9": <count>
-                },
-                "vulnerabilities_by_mitre_tactic": {
-                    "Execution": <count>,
-                    "Privilege Escalation": <count>,
-                    "Persistence": <count>,
-                    "Defense Evasion": <count>,
-                    "Initial Access": <count>,
-                    "Impact": <count>
-                },
-                "top_vulnerabilities": [
-                    {
-                        "description": "<Vulnerability description here>",
-                        "framework": ["<Frameworks here (e.g., OWASP, CWE, NIST)>"],
-                        "CVE": "<CVE ID>",
-                        "CVSS": <CVSS score>,
-                        "EPSS": <EPSS score (if applicable)>,
-                        "tactic": "<MITRE tactic>",
-                        "technique": "<MITRE technique>",
-                        "occurrences": <number of times this vulnerability appears>,
-                        "criticality": <criticality score from 1-10>,
-                        "reasoning": "<Reasoning for criticality score>",
-                        "mitigation": "<Mitigation strategy>"
-                    },
-                    
-                ]
-            },
-            "detailed_vulnerabilities_by_cvss_rating": [
-                {
-                    "cvss_rating": "critical_9_10",
-                    "total_vulnerabilities": <count>,
-                    "common_vulnerabilities": [
-                        {
-                            "description": "<Description>",
-                            "framework": ["<Frameworks>"],
-                            "CVE": "<CVE ID>",
-                            "CVSS": <CVSS score>,
-                            "EPSS": <EPSS score>,
-                            "tactic": "<MITRE tactic>",
-                            "technique": "<MITRE technique>",
-                            "occurrences": <count>,
-                            "mitigation": "<Mitigation strategy>"
-                        }
-                    ]
-                },
-                
-            ]
+    {
+        "vulnerabilities": {
+            "vulnerability_name1": ["filename1", "filename2"],
+            "vulnerability_name2": ["filename2", "filename3"],
+            "vulnerability_name3": ["filename1"],
+            ...
         }
-        Only return valid JSON without additional text or explanations."""
+    }
+
+    Important notes:
+    1. Each key in the "vulnerabilities" object should be a string representing the vulnerability name (e.g., "SQL_Injection", "Cross_Site_Scripting").
+    2. Each value should be an array of strings, where each string is a filename (e.g., "document1").
+    3. The same filename can appear in multiple vulnerability arrays, indicating that a file may contain multiple types of vulnerabilities.
+    4. If a vulnerability is identified but not found in any document, use an empty array [].
+    5. Use standard vulnerability names as defined in cybersecurity guidelines like OWASP Top Ten, NIST Cybersecurity Framework, CWE, and CVE.
+
+    Ensure that the JSON structure is strictly followed, with vulnerability names as keys and arrays of filenames as values.
+    """
     
     response = top_agent.chat(prompt)
     
     try:
         response_str = str(response)
         logger.info(f"LLM Response: {response_str}")
-        json_str = re.search(r'```json\s*(.*?)\s*```', response_str, re.DOTALL)
-        if json_str:
-            json_data = json.loads(json_str.group(1))
-        else:
-            json_data = json.loads(response_str)
-        formatted_response = {
-            "summary": json_data["summary"],
-            "detailed_vulnerabilities_by_cvss_rating": json_data["detailed_vulnerabilities_by_cvss_rating"]
-        }
         
-        return JSONResponse(content=formatted_response)
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parsing JSON response: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error parsing JSON response: {str(e)}")
+        # Try to extract JSON from the response
+        json_match = re.search(r'\{[\s\S]*\}', response_str)
+        if json_match:
+            json_str = json_match.group(0)
+            json_data = json.loads(json_str)
+        else:
+            # If no JSON found, parse the text response
+            vulnerabilities = {}
+            current_vuln = None
+            for line in response_str.split('\n'):
+                if ':' in line and not line.strip().startswith('-'):
+                    current_vuln = line.split(':')[0].strip()
+                    vulnerabilities[current_vuln] = []
+                elif line.strip().startswith('-') and current_vuln:
+                    doc = line.strip('- ').strip()
+                    if doc:
+                        vulnerabilities[current_vuln].append(doc)
+            
+            json_data = {"vulnerabilities": vulnerabilities}
+        
+        return json_data
     except Exception as e:
-        logger.error(f"Error processing vulnerabilities graph: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing vulnerabilities graph: {str(e)}")
+        logger.error(f"Error parsing LLM response: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error parsing graph response: {str(e)}")
 
 @app.post('/categories')
 async def get_categories(categories_request: CategoriesRequest):
