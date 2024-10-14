@@ -197,7 +197,10 @@ class QueryEngineBuilder:
             description="Useful for retrieving specific context from the Document."
         )
 
-
+        # kg_tool = QueryEngineTool.from_defaults(
+        #     query_engine=kg_query_engine,
+        #     description="Useful for understanding relationships and connections within the Document."
+        # )
 
         self.query_engine = RouterQueryEngine(
             selector=LLMSingleSelector.from_defaults(),
